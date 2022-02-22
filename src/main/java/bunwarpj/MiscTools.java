@@ -66,6 +66,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Stack;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -1668,6 +1669,7 @@ public class MiscTools
 				image[p] = pixels[p];    	  
 		}
 	}
+
 	//------------------------------------------------------------------
 	/**
 	 * Put the image from an ImageProcessor into a double[][].
@@ -1696,6 +1698,43 @@ public class MiscTools
 			for (int y = 0; (y < height); y++)
 				for (int x = 0; (x < width); x++, k++)
 					image[y][x]=pixels[k];
+		}
+	}
+
+	//------------------------------------------------------------------
+	/**
+	 * Create a ByteProcessor ImagePlus from an int[][].
+	 *
+	 * @param image input, the image in a double[][]
+	 * @param imageType input, the type of ImageProcessor to create, can be "byte", "short", or "float"
+	 */
+	static public ImagePlus createImagePlus(int image[][], String imageType, String imageTitle)
+	{
+		int height=image.length;
+		int width =image[0].length;
+
+		switch (imageType.toLowerCase(Locale.ROOT)) {
+			case "byte":
+				ByteProcessor imageProcByte = new ByteProcessor(width, height);
+				for (int y = 0; (y < height); y++) {
+					for (int x = 0; (x < width); x++) {
+						imageProcByte.set(x,y,image[y][x]);
+					}
+				}
+				return(new ImagePlus(imageTitle,imageProcByte));
+			case "short":
+				ShortProcessor imageProcShort = new ShortProcessor(width, height);
+				for (int y = 0; (y < height); y++) {
+					for (int x = 0; (x < width); x++) {
+						imageProcShort.set(x,y,image[y][x]);
+					}
+				}
+				return(new ImagePlus(imageTitle,imageProcShort));
+			case "float":
+				FloatProcessor imageProcFloat = new FloatProcessor(image);
+				return(new ImagePlus(imageTitle,imageProcFloat));
+			default:
+				return(null);
 		}
 	}
 
@@ -3047,7 +3086,7 @@ public class MiscTools
 	
 	/* --------------------------------------------------------------------*/
 	/**
-	 * Apply a given B-spline transformation to the source (gray-scale) image.
+	 * Apply a given B-spline transformation's coefficients to the source image.
 	 * The result image is return. The target image is used to know
 	 * the output size (Multi-thread version).
 	 *
@@ -3069,181 +3108,250 @@ public class MiscTools
 			double [][]cy)
 	{
 		final int targetHeight = targetImp.getProcessor().getHeight();
-		final int targetWidth  = targetImp.getProcessor().getWidth ();
-
-		// Compute the deformation
-		// Set these coefficients to an interpolator
-		BSplineModel swx = new BSplineModel(cx);
-		BSplineModel swy = new BSplineModel(cy);
-
+		final int targetWidth  = targetImp.getProcessor().getWidth();
 
 		// Compute the warped image
 		/* GRAY SCALE IMAGES */
 		if(!(sourceImp.getProcessor() instanceof ColorProcessor))
 		{
-			source.startPyramids();
-			try{
-				source.getThread().join();
-			} catch (InterruptedException e) {
-				IJ.error("Unexpected interruption exception " + e);
-			}
-			
-			FloatProcessor fp = new FloatProcessor(targetWidth, targetHeight);
-			
-			// Check the number of processors in the computer 
-			int nproc = Runtime.getRuntime().availableProcessors();
-
-			// We will use threads to display parts of the output image
-			int block_height = targetHeight / nproc;
-			//Removed to fix a NegativeArraySizeException with some combinations of targetHeight and nproc
-			//if (targetHeight % 2 != 0) 
-			//	block_height++;
-						
-			int nThreads = nproc; 			
-						
-			Thread[] threads  = new Thread[nThreads];
-			Rectangle[] rects = new Rectangle[nThreads];
-			FloatProcessor[] fp_tile = new FloatProcessor[nThreads];
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				// last block size is the rest of the window
-				int y_start = i*block_height;
-				
-				if (nThreads-1 == i) 
-					block_height = targetHeight - i*block_height;
-								
-				rects[i] = new Rectangle(0, y_start, targetWidth, block_height);
-								
-				fp_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
-				
-				threads[i] = new Thread(new GrayscaleApplyTransformTile(swx, swy, source, 
-															targetWidth, targetHeight, intervals,															 
-															rects[i], fp_tile[i]));
-				threads[i].start();
-			}
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				try {
-					threads[i].join();
-					threads[i] = null;
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}			
-			}
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				fp.insert(fp_tile[i], rects[i].x, rects[i].y);
-				fp_tile[i] = null;				
-				rects[i] = null;
-			}
-			fp.resetMinAndMax();
-			return fp;			
+			return applyTransformationCoefficientsGreyscale(source, intervals, cx, cy, targetWidth, targetHeight);
 		}
 		else /* COLOR IMAGES */
 		{        	
-			// red
-			BSplineModel sourceR = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(0, null), false, 1);
-			sourceR.setPyramidDepth(0);
-			sourceR.startPyramids();
-			// green
-			BSplineModel sourceG = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(1, null), false, 1);
-			sourceG.setPyramidDepth(0);
-			sourceG.startPyramids();
-			//blue
-			BSplineModel sourceB = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(2, null), false, 1);
-			sourceB.setPyramidDepth(0);
-			sourceB.startPyramids();
-
-			// Join threads
-			try {
-				sourceR.getThread().join();
-				sourceG.getThread().join();
-				sourceB.getThread().join();
-			} catch (InterruptedException e) {
-				IJ.error("Unexpected interruption exception " + e);
-			}
-
-			// Calculate warped RGB image
-			ColorProcessor cp = new ColorProcessor(targetWidth, targetHeight);
-			FloatProcessor fpR = new FloatProcessor(targetWidth, targetHeight);
-			FloatProcessor fpG = new FloatProcessor(targetWidth, targetHeight);
-			FloatProcessor fpB = new FloatProcessor(targetWidth, targetHeight);
-			
-			// Check the number of processors in the computer 
-			int nproc = Runtime.getRuntime().availableProcessors();
-
-			// We will use threads to display parts of the output image
-			int block_height = targetHeight / nproc;
-			//Removed to fix a NegativeArraySizeException with some combinations of targetHeight and nproc
-			//if (targetHeight % 2 != 0) 
-			//	block_height++;
-			
-			
-			int nThreads = nproc; 
-						
-			Thread[] threads  = new Thread[nThreads];
-			Rectangle[] rects = new Rectangle[nThreads];
-			FloatProcessor[] fpR_tile 		= new FloatProcessor[nThreads];
-			FloatProcessor[] fpG_tile 		= new FloatProcessor[nThreads];
-			FloatProcessor[] fpB_tile 		= new FloatProcessor[nThreads];
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				// last block size is the rest of the window
-				int y_start = i*block_height;
-				
-				if (nThreads-1 == i) 
-					block_height = targetHeight - i*block_height;
-								
-				rects[i] = new Rectangle(0, y_start, targetWidth, block_height);
-				
-				//IJ.log("block = 0 " + (i*block_height) + " " + targetWidth + " " + block_height );
-				
-				fpR_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
-				fpG_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
-				fpB_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
-				
-				threads[i] = new Thread(new ColorApplyTransformTile(swx, swy, sourceR, sourceG, sourceB, targetWidth,
-																	 targetHeight, intervals, rects[i], fpR_tile[i], 
-																	 fpG_tile[i], fpB_tile[i]));
-				threads[i].start();
-			}
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				try {
-					threads[i].join();
-					threads[i] = null;
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}			
-			}
-			
-			for (int i=0; i<nThreads; i++) 
-			{
-				fpR.insert(fpR_tile[i], rects[i].x, rects[i].y);				
-				fpG.insert(fpG_tile[i], rects[i].x, rects[i].y);
-				fpB.insert(fpB_tile[i], rects[i].x, rects[i].y);
-				
-				fpR_tile[i] = null;
-				fpG_tile[i] = null;
-				fpB_tile[i] = null;
-				
-				rects[i] = null;
-			}
-										
-			cp.setPixels(0, fpR);			
-			cp.setPixels(1, fpG);
-			cp.setPixels(2, fpB);            
-			cp.resetMinAndMax();
-
-			return cp;
-			
+			return applyTransformationCoefficientsColor(sourceImp, intervals, cx, cy, targetWidth, targetHeight);
 		}
 	} // end applyTransformationMT
+
+	/* --------------------------------------------------------------------*/
+	/**
+	 * Apply a given B-spline transformation's coefficients to the greyscale input image.
+	 * The result image is returned as an ImageProcessor.  (Multi-thread version).
+	 *
+	 * @param source source image as a BSplineModel
+	 * @param intervals intervals in the deformation
+	 * @param cx x- B-spline coefficients
+	 * @param cy y- B-spline coefficients
+	 * @param targetWidth width of the target image for which the transform was calculated
+	 * @param targetHeight height of the target image for which the transform was calculated
+	 *
+	 * @return result transformed image
+	 */
+	public static ImageProcessor applyTransformationCoefficientsGreyscale(BSplineModel source,
+																		  int intervals,
+																		  double [][]cx,
+																		  double [][]cy,
+																		  int targetWidth,
+																		  int targetHeight) {
+
+		// Set these coefficients to an interpolator
+		BSplineModel swx = new BSplineModel(cx);
+		BSplineModel swy = new BSplineModel(cy);
+
+		source.startPyramids();
+		try{
+			source.getThread().join();
+		} catch (InterruptedException e) {
+			IJ.error("Unexpected interruption exception " + e);
+		}
+
+		FloatProcessor fp = new FloatProcessor(targetWidth, targetHeight);
+
+		// Check the number of processors in the computer
+		int nproc = Runtime.getRuntime().availableProcessors();
+
+		// We will use threads to display parts of the output image
+		int block_height = targetHeight / nproc;
+
+		int nThreads = nproc;
+
+		Thread[] threads  = new Thread[nThreads];
+		Rectangle[] rects = new Rectangle[nThreads];
+		FloatProcessor[] fp_tile = new FloatProcessor[nThreads];
+
+		for (int i=0; i<nThreads; i++)
+		{
+			// last block size is the rest of the window
+			int y_start = i*block_height;
+
+			if (nThreads-1 == i)
+				block_height = targetHeight - i*block_height;
+
+			rects[i] = new Rectangle(0, y_start, targetWidth, block_height);
+
+			fp_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
+
+			threads[i] = new Thread(new GrayscaleApplyTransformTile(swx, swy, source,
+					targetWidth, targetHeight, intervals,
+					rects[i], fp_tile[i]));
+			threads[i].start();
+		}
+
+		for (int i=0; i<nThreads; i++)
+		{
+			try {
+				threads[i].join();
+				threads[i] = null;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		for (int i=0; i<nThreads; i++)
+		{
+			fp.insert(fp_tile[i], rects[i].x, rects[i].y);
+			fp_tile[i] = null;
+			rects[i] = null;
+		}
+		fp.resetMinAndMax();
+		return fp;
+
+	}
+
+	/* --------------------------------------------------------------------*/
+	/**
+	 * Apply a given B-spline transformation's coefficients to the color input image.
+	 * The result image is returned as an ImageProcessor.  (Multi-thread version).
+	 *
+	 * @param sourceImp source image representation
+	 * @param intervals intervals in the deformation
+	 * @param cx x- B-spline coefficients
+	 * @param cy y- B-spline coefficients
+	 * @param targetWidth width of the target image for which the transform was calculated
+	 * @param targetHeight height of the target image for which the transform was calculated
+	 *
+	 * @return result transformed image
+	 */
+	public static ImageProcessor applyTransformationCoefficientsColor(ImagePlus sourceImp,
+																	  int intervals,
+																	  double [][]cx,
+																	  double [][]cy,
+																	  int targetWidth,
+																	  int targetHeight) {
+
+		// Set these coefficients to an interpolator
+		BSplineModel swx = new BSplineModel(cx);
+		BSplineModel swy = new BSplineModel(cy);
+
+		// red
+		BSplineModel sourceR = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(0, null), false, 1);
+		sourceR.setPyramidDepth(0);
+		sourceR.startPyramids();
+		// green
+		BSplineModel sourceG = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(1, null), false, 1);
+		sourceG.setPyramidDepth(0);
+		sourceG.startPyramids();
+		//blue
+		BSplineModel sourceB = new BSplineModel( ((ColorProcessor) (sourceImp.getProcessor())).toFloat(2, null), false, 1);
+		sourceB.setPyramidDepth(0);
+		sourceB.startPyramids();
+
+		// Join threads
+		try {
+			sourceR.getThread().join();
+			sourceG.getThread().join();
+			sourceB.getThread().join();
+		} catch (InterruptedException e) {
+			IJ.error("Unexpected interruption exception " + e);
+		}
+
+		// Calculate warped RGB image
+		ColorProcessor cp = new ColorProcessor(targetWidth, targetHeight);
+		FloatProcessor fpR = new FloatProcessor(targetWidth, targetHeight);
+		FloatProcessor fpG = new FloatProcessor(targetWidth, targetHeight);
+		FloatProcessor fpB = new FloatProcessor(targetWidth, targetHeight);
+
+		// Check the number of processors in the computer
+		int nproc = Runtime.getRuntime().availableProcessors();
+
+		// We will use threads to display parts of the output image
+		int block_height = targetHeight / nproc;
+
+		int nThreads = nproc;
+
+		Thread[] threads  = new Thread[nThreads];
+		Rectangle[] rects = new Rectangle[nThreads];
+		FloatProcessor[] fpR_tile 		= new FloatProcessor[nThreads];
+		FloatProcessor[] fpG_tile 		= new FloatProcessor[nThreads];
+		FloatProcessor[] fpB_tile 		= new FloatProcessor[nThreads];
+
+		for (int i=0; i<nThreads; i++)
+		{
+			// last block size is the rest of the window
+			int y_start = i*block_height;
+
+			if (nThreads-1 == i)
+				block_height = targetHeight - i*block_height;
+
+			rects[i] = new Rectangle(0, y_start, targetWidth, block_height);
+
+			//IJ.log("block = 0 " + (i*block_height) + " " + targetWidth + " " + block_height );
+
+			fpR_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
+			fpG_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
+			fpB_tile[i] = new FloatProcessor(rects[i].width, rects[i].height);
+
+			threads[i] = new Thread(new ColorApplyTransformTile(swx, swy, sourceR, sourceG, sourceB, targetWidth,
+					targetHeight, intervals, rects[i], fpR_tile[i],
+					fpG_tile[i], fpB_tile[i]));
+			threads[i].start();
+		}
+
+		for (int i=0; i<nThreads; i++)
+		{
+			try {
+				threads[i].join();
+				threads[i] = null;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		for (int i=0; i<nThreads; i++)
+		{
+			fpR.insert(fpR_tile[i], rects[i].x, rects[i].y);
+			fpG.insert(fpG_tile[i], rects[i].x, rects[i].y);
+			fpB.insert(fpB_tile[i], rects[i].x, rects[i].y);
+
+			fpR_tile[i] = null;
+			fpG_tile[i] = null;
+			fpB_tile[i] = null;
+
+			rects[i] = null;
+		}
+
+		cp.setPixels(0, fpR);
+		cp.setPixels(1, fpG);
+		cp.setPixels(2, fpB);
+		cp.resetMinAndMax();
+
+		return cp;
+	}
+
+	/**
+	 * Apply a given B-spline Transformation object to a gray-scale image.
+	 *
+	 * @param aTransform the Transformation to apply
+	 * @param imageMtx the image as a 2D array of int values, should be scaled 0-255
+	 *
+	 * @return result transformed image as a matrix
+	 */
+	public static double[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, int[][] imageMtx) {
+
+		BSplineModel source = new BSplineModel(imageMtx, false);
+		source.setPyramidDepth(0);
+
+		final int targetHeight = imageMtx.length;
+		final int targetWidth  = imageMtx[0].length;
+
+		ImageProcessor ip = applyTransformationCoefficientsGreyscale(source, aTransform.getIntervals(),
+				aTransform.getDirectDeformationCoefficientsX(), aTransform.getDirectDeformationCoefficientsY(),
+				targetWidth, targetHeight);
+
+		double[][] result = new double[ip.getHeight()][ip.getWidth()];
+		extractImage(ip, result);
+		return result;
+
+	}
 
 
 	/* ------------------------------------------------------------------------ */

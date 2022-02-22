@@ -48,6 +48,7 @@ import ij.WindowManager;
 import ij.io.FileSaver;
 import ij.io.Opener;
 import ij.plugin.PlugIn;
+import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
 import java.awt.Dialog;
@@ -798,9 +799,105 @@ public class bUnwarpJ_ implements PlugIn
        return warp;
        
     } // end computeTransformationBatch  
-    
-    
-    
+
+
+    //------------------------------------------------------------------
+    /**
+     * Method for images alignment with no graphical interface. This
+     * method gives as result a Transformation object that
+     * contains all the registration information.
+     * Subsampling is not available, but all it really does is rescale the image first using IJ
+     *
+     * @param targetImageMtx input target image as a matrix of values between 0-255
+     * @param sourceImageMtx input source image as a matrix of values between 0-255
+     * @param parameter registration parameters
+     *
+     * @return results transformation object
+     */
+    public static Transformation computeTransformationBatch(int[][] targetImageMtx,
+                                                            int[][] sourceImageMtx,
+                                                            Param parameter)
+    {
+        if(targetImageMtx == null || sourceImageMtx == null || parameter == null)
+        {
+            IJ.log("Missing parameters to compute transformation!");
+            return null;
+        }
+
+        // Produce side information
+        final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
+        final int min_scale_image = 0;
+
+        // Create target image model
+        final BSplineModel target = new BSplineModel(targetImageMtx, true);
+        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.startPyramids();
+
+        // Create source image model
+        final BSplineModel source = new BSplineModel(sourceImageMtx, true);
+        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.startPyramids();
+
+        // Join threads
+        try
+        {
+            source.getThread().join();
+            target.getThread().join();
+        }
+        catch (InterruptedException e)
+        {
+            IJ.log("Unexpected interruption exception " + e);
+        }
+
+        // Output images
+        ImagePlus[] output_ip = new ImagePlus[2];
+
+        // output level to -1 so nothing is displayed
+        final int outputLevel = -1;
+
+        final boolean showMarquardtOptim = false;
+
+        ImagePlus sourceImp = MiscTools.createImagePlus(sourceImageMtx, "byte", "source image");
+        ImagePlus targetImp = MiscTools.createImagePlus(sourceImageMtx, "byte", "target image");
+
+        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
+        final Mask sourceMsk = new Mask(sourceImageMtx[0].length, sourceImageMtx.length);
+
+        PointHandler sourcePh  = new PointHandler(sourceImp);
+        PointHandler targetPh  = new PointHandler(targetImp);
+
+        final Transformation warp = new Transformation(
+                sourceImp, targetImp, source, target, sourcePh, targetPh,
+                sourceMsk, targetMsk, null, null,
+                parameter.min_scale_deformation, parameter.max_scale_deformation,
+                min_scale_image, parameter.divWeight,
+                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
+                parameter.consistencyWeight, parameter.stopThreshold,
+                outputLevel, showMarquardtOptim, parameter.mode,null, null,
+                output_ip[0], output_ip[1], null,
+                sourceImp.getProcessor(), targetImp.getProcessor());
+
+        // Initial affine transform correction values
+        warp.setAnisotropyCorrection( parameter.getAnisotropyCorrection() );
+        warp.setScaleCorrection( parameter.getScaleCorrection() );
+        warp.setShearCorrection( parameter.getShearCorrection() );
+
+        IJ.log("\nRegistering...\n");
+
+        long start = System.currentTimeMillis(); // start timing
+
+        if(parameter.mode == MainDialog.MONO_MODE)
+            warp.doUnidirectionalRegistration();
+        else
+            warp.doBidirectionalRegistration();
+
+        long stop = System.currentTimeMillis(); // stop timing
+        IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
+
+        return warp;
+
+    } // end computeTransformationBatch
+
     
     //------------------------------------------------------------------
     /**
