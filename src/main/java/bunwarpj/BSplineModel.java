@@ -290,7 +290,7 @@ public class BSplineModel implements Runnable
 	 * @param isTarget enables the computation of the derivative or not
 	 */
 	public BSplineModel (
-			final int [][]img,
+			final double [][]img,
 			final boolean isTarget)
 	{
 		// Initialize thread

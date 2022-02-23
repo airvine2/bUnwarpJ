@@ -1686,7 +1686,7 @@ public class MiscTools
 			final byte[] pixels = (byte[])ip.getPixels();
 			for (int y = 0; (y < height); y++)
 				for (int x = 0; (x < width); x++, k++)
-					image[y][x] = (double)(pixels[k] & 0xFF);
+					image[y][x] = (pixels[k] & 0xFF);
 		} else if (ip instanceof ShortProcessor) {
 			final short[] pixels = (short[])ip.getPixels();
 			for (int y = 0; (y < height); y++)
@@ -1703,39 +1703,66 @@ public class MiscTools
 
 	//------------------------------------------------------------------
 	/**
-	 * Create a ByteProcessor ImagePlus from an int[][].
+	 * Put the image from an ImageProcessor into a double[][].
+	 *
+	 * @param ip input, origin of the image
+	 * @param image output, the image in a double[][]
+	 */
+	static public void extractImage(final ImageProcessor ip, int image[][])
+	{
+		int k=0;
+		int height=ip.getHeight();
+		int width =ip.getWidth ();
+		if (ip instanceof ByteProcessor) {
+			final byte[] pixels = (byte[])ip.getPixels();
+			for (int y = 0; (y < height); y++)
+				for (int x = 0; (x < width); x++, k++)
+					image[y][x] = (pixels[k] & 0xFF);
+		} else if (ip instanceof ShortProcessor) {
+			final short[] pixels = (short[])ip.getPixels();
+			for (int y = 0; (y < height); y++)
+				for (int x = 0; (x < width); x++, k++)
+					if (pixels[k] < (short)0) image[y][x] = (int)(pixels[k] + 65536.0F);
+					else                      image[y][x] = pixels[k];
+		} else if (ip instanceof FloatProcessor) {
+			final float[] pixels = (float[])ip.getPixels();
+			for (int y = 0; (y < height); y++)
+				for (int x = 0; (x < width); x++, k++)
+					image[y][x] = Math.round(pixels[k]);
+		}
+	}
+
+	//------------------------------------------------------------------
+	/**
+	 * Create a ByteProcessor ImagePlus from a double[][].
 	 *
 	 * @param image input, the image in a double[][]
-	 * @param imageType input, the type of ImageProcessor to create, can be "byte", "short", or "float"
+	 * @param imageTitle input, the title to assign to the resulting ImagePlus
 	 */
-	static public ImagePlus createImagePlus(int image[][], String imageType, String imageTitle)
+	static public ImagePlus createImagePlusByte(double image[][], String imageTitle)
 	{
 		int height=image.length;
 		int width =image[0].length;
-
-		switch (imageType.toLowerCase(Locale.ROOT)) {
-			case "byte":
-				ByteProcessor imageProcByte = new ByteProcessor(width, height);
-				for (int y = 0; (y < height); y++) {
-					for (int x = 0; (x < width); x++) {
-						imageProcByte.set(x,y,image[y][x]);
-					}
-				}
-				return(new ImagePlus(imageTitle,imageProcByte));
-			case "short":
-				ShortProcessor imageProcShort = new ShortProcessor(width, height);
-				for (int y = 0; (y < height); y++) {
-					for (int x = 0; (x < width); x++) {
-						imageProcShort.set(x,y,image[y][x]);
-					}
-				}
-				return(new ImagePlus(imageTitle,imageProcShort));
-			case "float":
-				FloatProcessor imageProcFloat = new FloatProcessor(image);
-				return(new ImagePlus(imageTitle,imageProcFloat));
-			default:
-				return(null);
+		ByteProcessor imageProcByte = new ByteProcessor(width, height);
+		for (int y = 0; (y < height); y++) {
+			for (int x = 0; (x < width); x++) {
+				imageProcByte.set(x,y,(int)Math.round(image[y][x]));
+			}
 		}
+		return(new ImagePlus(imageTitle,imageProcByte));
+	}
+
+	//------------------------------------------------------------------
+	/**
+	 * Create a FloatProcessor ImagePlus from a float[][].
+	 *
+	 * @param image input, the image in a float[][]
+	 * @param imageTitle input, the title to assign to the resulting ImagePlus
+	 */
+	static public ImagePlus createImagePlusFloat(float image[][], String imageTitle)
+	{
+		FloatProcessor imageProcFloat = new FloatProcessor(image);
+		return(new ImagePlus(imageTitle,imageProcFloat));
 	}
 
 	//------------------------------------------------------------------
@@ -3335,7 +3362,7 @@ public class MiscTools
 	 *
 	 * @return result transformed image as a matrix
 	 */
-	public static double[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, int[][] imageMtx) {
+	public static double[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, double[][] imageMtx) {
 
 		BSplineModel source = new BSplineModel(imageMtx, false);
 		source.setPyramidDepth(0);

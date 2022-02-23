@@ -229,7 +229,7 @@ public class bUnwarpJ_ implements PlugIn
     
     //------------------------------------------------------------------
     /**
-     * Method for images alignment with no graphical interface. This 
+     * Method for alignment of ImagePlus images with no graphical interface. This
      * method gives as result a Transformation object that 
      * contains all the registration information.
      *
@@ -264,111 +264,13 @@ public class bUnwarpJ_ implements PlugIn
     									 double imageWeight,
     									 double consistencyWeight,
     									 double stopThreshold) 
-    {    	       
-       // Produce side information
-       final int imagePyramidDepth = max_scale_deformation - min_scale_deformation + 1;
-       final int min_scale_image = 0;
-       
-       // output level to -1 so nothing is displayed 
-       final int outputLevel = -1;
-       
-       final boolean showMarquardtOptim = false;       
+    {
+        //gather all parameters into a Parameter object
+        Param paramsToUse = new Param(mode, img_subsamp_fact, min_scale_deformation, max_scale_deformation,
+                divWeight, curlWeight, landmarkWeight, imageWeight, consistencyWeight,
+                stopThreshold);
 
-       // Create target image model
-       final BSplineModel target = new BSplineModel(targetImp.getProcessor(), true, 
-    		   													 (int) Math.pow(2, img_subsamp_fact));
-       
-       target.setPyramidDepth(imagePyramidDepth+min_scale_image);
-       target.startPyramids();
-       
-       // Create target mask
-       final Mask targetMsk = (targetMskIP != null) ? new Mask(targetMskIP, true) 
-       		  										         : new Mask(targetImp.getProcessor(), false);
-                    
-       PointHandler targetPh = null;
-
-       // Create source image model
-       boolean bIsReverse = true;         
-
-       final BSplineModel source = new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-    		   													(int) Math.pow(2, img_subsamp_fact));
-
-       source.setPyramidDepth(imagePyramidDepth + min_scale_image);
-       source.startPyramids();
-       
-       // Create source mask
-       final Mask sourceMsk = (sourceMskIP != null) ? new Mask(sourceMskIP, true) 
-       														 : new Mask(sourceImp.getProcessor(), false);
-       
-       PointHandler sourcePh = null;
-
-       // Load points rois as landmarks if any.
-       Stack<Point> sourceStack = new Stack<Point>();
-       Stack<Point> targetStack = new Stack<Point>();
-       MiscTools.loadPointRoiAsLandmarks(sourceImp, targetImp, sourceStack, targetStack);
-
-       sourcePh  = new PointHandler(sourceImp);
-       targetPh  = new PointHandler(targetImp);
-
-       while ((!sourceStack.empty()) && (!targetStack.empty())) 
-       {
-    	   Point sourcePoint = (Point)sourceStack.pop();
-    	   Point targetPoint = (Point)targetStack.pop();
-    	   sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
-    	   targetPh.addPoint(targetPoint.x, targetPoint.y);
-       }
-       
-       
-       // Set no initial affine matrices
-       final double[][] sourceAffineMatrix = null;
-       final double[][] targetAffineMatrix = null;
- 
-       // Join threads
-       try 
-       {
-           source.getThread().join();
-           target.getThread().join();
-       } 
-       catch (InterruptedException e) 
-       {
-           IJ.error("Unexpected interruption exception " + e);
-       }
-
-       // Perform registration
-       ImagePlus[] output_ip = new ImagePlus[2];
-       output_ip[0] = null; 
-       output_ip[1] = null; 
-       
-       // The dialog is set to null to work in batch mode
-       final MainDialog dialog = null;
-       
-       final ImageProcessor originalSourceIP = sourceImp.getProcessor();
-       final ImageProcessor originalTargetIP = targetImp.getProcessor();
-
-       // Setup registration parameters
-       final Transformation warp = new Transformation(
-         sourceImp, targetImp, source, target, sourcePh, targetPh,
-         sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-         min_scale_deformation, max_scale_deformation, min_scale_image, divWeight, 
-         curlWeight, landmarkWeight, imageWeight, consistencyWeight, stopThreshold, 
-         outputLevel, showMarquardtOptim, mode, null, null, output_ip[0], output_ip[1], dialog,
-         originalSourceIP, originalTargetIP);
-
-       IJ.log("\nRegistering...\n");
-       
-       long start = System.currentTimeMillis(); // start timing
-
-       // Perform registration
-       if(mode == MainDialog.MONO_MODE)       
-    	   warp.doUnidirectionalRegistration();    	       
-       else
-    	   warp.doBidirectionalRegistration();
-
-       long stop = System.currentTimeMillis(); // stop timing
-       IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
-
-       return warp;
-       
+        return computeTransformationBatch(targetImp, sourceImp, targetMskIP, sourceMskIP, paramsToUse);
     } // end computeTransformationBatch    
     
     
@@ -403,119 +305,9 @@ public class bUnwarpJ_ implements PlugIn
     			   "\nSource image: " + sourceImp.getTitle() + 
     			   "\nTarget image: " + targetImp.getTitle() + "\n" +
     			   parameter.toString() + "\n");
-       
-       // Produce side information
-       final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-       final int min_scale_image = 0;
-       
-       // output level to -1 so nothing is displayed 
-       final int outputLevel = -1;
-       
-       final boolean showMarquardtOptim = false;       
 
-       // Create target image model
-       final BSplineModel target = new BSplineModel(targetImp.getProcessor(), true, 
-    		   													 (int) Math.pow(2, parameter.img_subsamp_fact));
-       
-       target.setPyramidDepth(imagePyramidDepth+min_scale_image);
-       target.startPyramids();
-       
-       // Create target mask
-       final Mask targetMsk = (targetMskIP != null) ? new Mask(targetMskIP, true) 
-       		  										         : new Mask(targetImp.getProcessor(), false);
-                    
-       PointHandler targetPh = null;
-
-       // Create source image model
-       boolean bIsReverse = true;         
-
-       final BSplineModel source = new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-    		   													(int) Math.pow(2, parameter.img_subsamp_fact));
-
-       source.setPyramidDepth(imagePyramidDepth + min_scale_image);
-       source.startPyramids();
-       
-       // Create source mask
-       final Mask sourceMsk = (sourceMskIP != null) ? new Mask(sourceMskIP, true) 
-       														 : new Mask(sourceImp.getProcessor(), false);
-       
-       PointHandler sourcePh = null;
-
-       // Load landmarks
-       //if (parameter.landmarkWeight != 0)
-       //{
-          Stack<Point> sourceStack = new Stack<Point>();
-          Stack<Point> targetStack = new Stack<Point>();
-          MiscTools.loadPointRoiAsLandmarks(sourceImp, targetImp, sourceStack, targetStack);
-
-          sourcePh  = new PointHandler(sourceImp);
-          targetPh  = new PointHandler(targetImp);
-
-          while ((!sourceStack.empty()) && (!targetStack.empty())) 
-          {
-             Point sourcePoint = (Point)sourceStack.pop();
-             Point targetPoint = (Point)targetStack.pop();
-             sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
-             targetPh.addPoint(targetPoint.x, targetPoint.y);
-          }
-       //}
-       
-       // Set no initial affine matrices
-       final double[][] sourceAffineMatrix = null;
-       final double[][] targetAffineMatrix = null;
- 
-       // Join threads
-       try 
-       {
-           source.getThread().join();
-           target.getThread().join();
-       } 
-       catch (InterruptedException e) 
-       {
-           IJ.error("Unexpected interruption exception " + e);
-       }
-
-       // Perform registration
-       ImagePlus[] output_ip = new ImagePlus[2];
-       output_ip[0] = null; 
-       output_ip[1] = null; 
-       
-       // The dialog is set to null to work in batch mode
-       final MainDialog dialog = null;
-       
-       final ImageProcessor originalSourceIP = sourceImp.getProcessor();
-       final ImageProcessor originalTargetIP = targetImp.getProcessor();
-
-
-       final Transformation warp = new Transformation(
-         sourceImp, targetImp, source, target, sourcePh, targetPh,
-         sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-         parameter.min_scale_deformation, parameter.max_scale_deformation, 
-         min_scale_image, parameter.divWeight, 
-         parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight, 
-         parameter.consistencyWeight, parameter.stopThreshold, 
-         outputLevel, showMarquardtOptim, parameter.mode,null, null, output_ip[0], output_ip[1], dialog,
-         originalSourceIP, originalTargetIP);
-       
-       // Initial affine transform correction values
-       warp.setAnisotropyCorrection( parameter.getAnisotropyCorrection() );
-       warp.setScaleCorrection( parameter.getScaleCorrection() );
-       warp.setShearCorrection( parameter.getShearCorrection() );
-
-       IJ.log("\nRegistering...\n");
-       
-       long start = System.currentTimeMillis(); // start timing
-
-       if(parameter.mode == MainDialog.MONO_MODE)       
-    	   warp.doUnidirectionalRegistration();    	       
-       else
-    	   warp.doBidirectionalRegistration();
-
-       long stop = System.currentTimeMillis(); // stop timing
-       IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
-
-       return warp;
-       
+        return computeTransformationBatch(targetImp, sourceImp, targetMskIP, sourceMskIP,
+                null, null, parameter);
     } // end computeTransformationBatch    
     
 
@@ -549,131 +341,64 @@ public class bUnwarpJ_ implements PlugIn
     	   return null;
        }
 
-       // Produce side information
-       final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-       final int min_scale_image = 0;
-       
-       // output level to -1 so nothing is displayed 
-       final int outputLevel = -1;
-       
-       final boolean showMarquardtOptim = false;       
+        //Init source and target image model
+        final BSplineModel target = new BSplineModel(targetImp.getProcessor(), true,
+                (int) Math.pow(2, parameter.img_subsamp_fact));
+        final BSplineModel source = new BSplineModel(sourceImp.getProcessor(), true,
+                (int) Math.pow(2, parameter.img_subsamp_fact));
 
-       // Create target image model
-       final BSplineModel target = new BSplineModel(targetImp.getProcessor(), true, 
-    		   													 (int) Math.pow(2, parameter.img_subsamp_fact));
-       
-       target.setPyramidDepth(imagePyramidDepth+min_scale_image);
-       target.startPyramids();
-       
-       // Create target mask
-       final Mask targetMsk = (targetMskIP != null) ? new Mask(targetMskIP, true) 
-       		  										         : new Mask(targetImp.getProcessor(), false);
-                    
-       PointHandler targetPh = null;
+        // Create target mask
+        final Mask targetMsk = (targetMskIP != null) ? new Mask(targetMskIP, true)
+                : new Mask(targetImp.getProcessor(), false);
+        // Create source mask
+        final Mask sourceMsk = (sourceMskIP != null) ? new Mask(sourceMskIP, true)
+                : new Mask(sourceImp.getProcessor(), false);
 
-       // Create source image model
-       boolean bIsReverse = true;         
+        // Load points rois as landmarks if any.
+        Stack<Point> sourceStack = new Stack<Point>();
+        Stack<Point> targetStack = new Stack<Point>();
+        MiscTools.loadPointRoiAsLandmarks(sourceImp, targetImp, sourceStack, targetStack);
 
-       final BSplineModel source = new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-    		   													(int) Math.pow(2, parameter.img_subsamp_fact));
+        PointHandler targetPh = new PointHandler(targetImp);
+        PointHandler sourcePh = new PointHandler(sourceImp);
 
-       source.setPyramidDepth(imagePyramidDepth + min_scale_image);
-       source.startPyramids();
-       
-       // Create source mask
-       final Mask sourceMsk = (sourceMskIP != null) ? new Mask(sourceMskIP, true) 
-       														 : new Mask(sourceImp.getProcessor(), false);
-       
-       PointHandler sourcePh = null;
+        while ((!sourceStack.empty()) && (!targetStack.empty()))
+        {
+            Point sourcePoint = (Point)sourceStack.pop();
+            Point targetPoint = (Point)targetStack.pop();
+            sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
+            targetPh.addPoint(targetPoint.x, targetPoint.y);
+        }
 
-       Stack<Point> sourceStack = new Stack<Point>();
-       Stack<Point> targetStack = new Stack<Point>();
-       MiscTools.loadPointRoiAsLandmarks(sourceImp, targetImp, sourceStack, targetStack);
+        final double[][] targetAffineMatrix;
+        final double[][] sourceAffineMatrix;
 
-       sourcePh  = new PointHandler(sourceImp);
-       targetPh  = new PointHandler(targetImp);
+        if(sourceAffineTransf != null && targetAffineTransf != null)
+        {
+            final double[] flatMat = new double [6];
+            sourceAffineTransf.getMatrix(flatMat);
+            sourceAffineMatrix = new double[][]{ {flatMat[0], flatMat[2], flatMat[4] },  {flatMat[1], flatMat[3], flatMat[5]} };
+            //IJ.log("Source Matrix = " + flatMat[0] + " " +  flatMat[2] + " " +  flatMat[4] + " " +  flatMat[1] + " "  + flatMat[3] + " " +  flatMat[5]);
+            targetAffineTransf.getMatrix(flatMat);
+            //IJ.log("Target Matrix = " + flatMat[0] + " " +  flatMat[2] + " " +  flatMat[4] + " " +  flatMat[1] + " "  + flatMat[3] + " " +  flatMat[5]);
+            targetAffineMatrix = new double[][]{ {flatMat[0], flatMat[2], flatMat[4] },  {flatMat[1], flatMat[3], flatMat[5]} };
+        }
+        else
+        {
+            sourceAffineMatrix = null;
+            targetAffineMatrix = null;
+        }
 
-       while ((!sourceStack.empty()) && (!targetStack.empty())) 
-       {
-    	   Point sourcePoint = (Point)sourceStack.pop();
-    	   Point targetPoint = (Point)targetStack.pop();
-    	   sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
-    	   targetPh.addPoint(targetPoint.x, targetPoint.y);
-       }
+        final Transformation warp =  computeTransformation(target, source, parameter, targetImp, sourceImp, targetMsk,
+                sourceMsk, targetPh, sourcePh, targetAffineMatrix, sourceAffineMatrix);
 
- 
-       // Join threads
-       try 
-       {
-           source.getThread().join();
-           target.getThread().join();
-       } 
-       catch (InterruptedException e) 
-       {
-           IJ.error("Unexpected interruption exception " + e);
-       }
-
-       // Perform registration
-       ImagePlus[] output_ip = new ImagePlus[2];
-       output_ip[0] = null; 
-       output_ip[1] = null; 
-       
-       // The dialog is set to null to work in batch mode
-       final MainDialog dialog = null;
-       
-       final ImageProcessor originalSourceIP = sourceImp.getProcessor();
-       final ImageProcessor originalTargetIP = targetImp.getProcessor();
-
-       
-       final double[][] targetAffineMatrix;
-       final double[][] sourceAffineMatrix;
-       
-       if(sourceAffineTransf != null && targetAffineTransf != null)
-       {
-    	   final double[] flatMat = new double [6];
-    	   sourceAffineTransf.getMatrix(flatMat);
-    	   sourceAffineMatrix = new double[][]{ {flatMat[0], flatMat[2], flatMat[4] },  {flatMat[1], flatMat[3], flatMat[5]} };
-    	   //IJ.log("Source Matrix = " + flatMat[0] + " " +  flatMat[2] + " " +  flatMat[4] + " " +  flatMat[1] + " "  + flatMat[3] + " " +  flatMat[5]);
-    	   targetAffineTransf.getMatrix(flatMat);
-    	   //IJ.log("Target Matrix = " + flatMat[0] + " " +  flatMat[2] + " " +  flatMat[4] + " " +  flatMat[1] + " "  + flatMat[3] + " " +  flatMat[5]);
-    	   targetAffineMatrix = new double[][]{ {flatMat[0], flatMat[2], flatMat[4] },  {flatMat[1], flatMat[3], flatMat[5]} };
-       }
-       else
-       {
-    	   sourceAffineMatrix = null;
-    	   targetAffineMatrix = null;
-       }
-       
-       final Transformation warp = new Transformation(
-         sourceImp, targetImp, source, target, sourcePh, targetPh,
-         sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-         parameter.min_scale_deformation, parameter.max_scale_deformation, 
-         min_scale_image, parameter.divWeight, 
-         parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight, 
-         parameter.consistencyWeight, parameter.stopThreshold, 
-         outputLevel, showMarquardtOptim, parameter.mode,null, null, output_ip[0], output_ip[1], dialog,
-         originalSourceIP, originalTargetIP);
-
-       IJ.log("\nRegistering...\n");
-       
-       long start = System.currentTimeMillis(); // start timing
-
-       if(parameter.mode == MainDialog.MONO_MODE)       
-    	   warp.doUnidirectionalRegistration();    	       
-       else
-    	   warp.doBidirectionalRegistration();
-
-       long stop = System.currentTimeMillis(); // stop timing
-       IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
-
-       return warp;
-       
+        return warp;
     } // end computeTransformationBatch   
     
     
     //------------------------------------------------------------------
     /**
-     * Method for images alignment with no graphical interface. This 
+     * Method for alignment of 2 sets of landmark points with no graphical interface, and no image. This
      * method gives as result a Transformation object that 
      * contains all the registration information.
      *
@@ -696,108 +421,42 @@ public class bUnwarpJ_ implements PlugIn
     									Stack<Point> targetPoints,
     									Param parameter) 
     {    	
-       if(sourcePoints == null || targetPoints == null || parameter == null)
-       {
-    	   IJ.error("Missing parameters to compute transformation!");
-    	   return null;
-       }
+        if(sourcePoints == null || targetPoints == null || parameter == null)
+        {
+           IJ.error("Missing parameters to compute transformation!");
+           return null;
+        }
 
+        // Create target image model
+        final BSplineModel target = new BSplineModel(targetWidth, targetHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
+        // Create source image model
+        final BSplineModel source = new BSplineModel(sourceWidth, sourceHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
 
-       //IJ.log("Registration parameters:\n" + parameter.toString());
-       
-       // Produce side information
-       final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-       final int min_scale_image = 0;
-       
-       // output level to -1 so nothing is displayed 
-       final int outputLevel = -1;
-       
-       final boolean showMarquardtOptim = false;       
+        // Create target mask
+        final Mask targetMsk = new Mask(targetWidth, targetHeight);
+        // Create source mask
+        final Mask sourceMsk = new Mask (sourceWidth, sourceHeight);
 
-       // Create target image model
-       final BSplineModel target = new BSplineModel(targetWidth, targetHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
-       
-       target.setPyramidDepth(imagePyramidDepth+min_scale_image);
-       target.startPyramids();
-       
-       // Create target mask
-       final Mask targetMsk = new Mask(targetWidth, targetHeight);                           
+        // Set landmarks
+        PointHandler sourcePh  = new PointHandler(sourceWidth, sourceHeight);
+        PointHandler targetPh  = new PointHandler(targetWidth, targetHeight);
 
-       // Create source image model
-       final BSplineModel source = new BSplineModel(sourceWidth, sourceHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
+        while ((!sourcePoints.empty()) && (!targetPoints.empty()))
+        {
+           Point sourcePoint = sourcePoints.pop();
+           Point targetPoint = targetPoints.pop();
+           sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
+           targetPh.addPoint(targetPoint.x, targetPoint.y);
+        }
 
-       source.setPyramidDepth(imagePyramidDepth + min_scale_image);
-       source.startPyramids();
-       
-       // Create source mask
-       final Mask sourceMsk = new Mask (sourceWidth, sourceHeight);
-          
+        //initialize ImagePlus source and target with null ImageProcessor
+        ImagePlus sourceImp = new ImagePlus();
+        ImagePlus targetImp = new ImagePlus();
 
-       // Set landmarks
-       PointHandler sourcePh  = new PointHandler(sourceWidth, sourceHeight);
-       PointHandler targetPh  = new PointHandler(targetWidth, targetHeight);
+        final Transformation warp =  computeTransformation(target, source, parameter, targetImp, sourceImp, targetMsk,
+                sourceMsk, targetPh, sourcePh, null, null);
 
-       while ((!sourcePoints.empty()) && (!targetPoints.empty())) 
-       {
-    	   Point sourcePoint = (Point)sourcePoints.pop();
-    	   Point targetPoint = (Point)targetPoints.pop();
-    	   sourcePh.addPoint(sourcePoint.x, sourcePoint.y);
-    	   targetPh.addPoint(targetPoint.x, targetPoint.y);
-       }
-
-       
-       // Set no initial affine matrices
-       final double[][] sourceAffineMatrix = null;
-       final double[][] targetAffineMatrix = null;
- 
-       // Join threads
-       try 
-       {
-           source.getThread().join();
-           target.getThread().join();
-       } 
-       catch (InterruptedException e) 
-       {
-           IJ.error("Unexpected interruption exception " + e);
-       }
-
-       // Perform registration
-       ImagePlus[] output_ip = new ImagePlus[2];
-       output_ip[0] = null; 
-       output_ip[1] = null; 
-       
-       // The dialog is set to null to work in batch mode
-       final MainDialog dialog = null;
-       
-       final ImageProcessor originalSourceIP = null;
-       final ImageProcessor originalTargetIP = null;
-
-       // Set transformation parameters
-       final Transformation warp = new Transformation(
-         null, null, source, target, sourcePh, targetPh,
-         sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-         parameter.min_scale_deformation, parameter.max_scale_deformation, 
-         min_scale_image, parameter.divWeight, 
-         parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight, 
-         parameter.consistencyWeight, parameter.stopThreshold, 
-         outputLevel, showMarquardtOptim, parameter.mode, null, null, output_ip[0], output_ip[1], dialog,
-         originalSourceIP, originalTargetIP);
-
-       IJ.log("\nRegistering...\n");
-       
-       long start = System.currentTimeMillis(); // start timing
-       
-       // Register
-       if(parameter.mode == MainDialog.MONO_MODE)       
-    	   warp.doUnidirectionalRegistration();    	       
-       else
-    	   warp.doBidirectionalRegistration();
-
-       long stop = System.currentTimeMillis(); // stop timing
-       IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
-
-       return warp;
-       
+        return warp;
     } // end computeTransformationBatch  
 
 
@@ -814,8 +473,8 @@ public class bUnwarpJ_ implements PlugIn
      *
      * @return results transformation object
      */
-    public static Transformation computeTransformationBatch(int[][] targetImageMtx,
-                                                            int[][] sourceImageMtx,
+    public static Transformation computeTransformationBatch(double[][] targetImageMtx,
+                                                            double[][] sourceImageMtx,
                                                             Param parameter)
     {
         if(targetImageMtx == null || sourceImageMtx == null || parameter == null)
@@ -824,17 +483,40 @@ public class bUnwarpJ_ implements PlugIn
             return null;
         }
 
+        // Create target image model
+        final BSplineModel target = new BSplineModel(targetImageMtx, true);
+
+        // Create source image model
+        final BSplineModel source = new BSplineModel(sourceImageMtx, true);
+
+        ImagePlus sourceImp = MiscTools.createImagePlusByte(sourceImageMtx, "source image");
+        ImagePlus targetImp = MiscTools.createImagePlusByte(sourceImageMtx, "target image");
+
+        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
+        final Mask sourceMsk = new Mask(sourceImageMtx[0].length, sourceImageMtx.length);
+
+        PointHandler sourcePh  = new PointHandler(sourceImp);
+        PointHandler targetPh  = new PointHandler(targetImp);
+
+        final Transformation warp =  computeTransformation(target, source, parameter, targetImp, sourceImp, targetMsk,
+                sourceMsk, targetPh, sourcePh, null, null);
+
+        return warp;
+    } // end computeTransformationBatch
+
+    public static Transformation computeTransformation(BSplineModel target, BSplineModel source, Param parameter,
+                                                       ImagePlus targetImp, ImagePlus sourceImp,
+                                                       Mask targetMsk, Mask sourceMsk,
+                                                       PointHandler targetPh, PointHandler sourcePh,
+                                                       double[][] targetAffineMatrix, double[][] sourceAffineMatrix) {
         // Produce side information
         final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
         final int min_scale_image = 0;
 
-        // Create target image model
-        final BSplineModel target = new BSplineModel(targetImageMtx, true);
+        //calculate the BSpline model coefficients for source and target
         target.setPyramidDepth(imagePyramidDepth+min_scale_image);
         target.startPyramids();
 
-        // Create source image model
-        final BSplineModel source = new BSplineModel(sourceImageMtx, true);
         source.setPyramidDepth(imagePyramidDepth + min_scale_image);
         source.startPyramids();
 
@@ -857,18 +539,9 @@ public class bUnwarpJ_ implements PlugIn
 
         final boolean showMarquardtOptim = false;
 
-        ImagePlus sourceImp = MiscTools.createImagePlus(sourceImageMtx, "byte", "source image");
-        ImagePlus targetImp = MiscTools.createImagePlus(sourceImageMtx, "byte", "target image");
-
-        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
-        final Mask sourceMsk = new Mask(sourceImageMtx[0].length, sourceImageMtx.length);
-
-        PointHandler sourcePh  = new PointHandler(sourceImp);
-        PointHandler targetPh  = new PointHandler(targetImp);
-
         final Transformation warp = new Transformation(
                 sourceImp, targetImp, source, target, sourcePh, targetPh,
-                sourceMsk, targetMsk, null, null,
+                sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
                 parameter.min_scale_deformation, parameter.max_scale_deformation,
                 min_scale_image, parameter.divWeight,
                 parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
@@ -878,9 +551,11 @@ public class bUnwarpJ_ implements PlugIn
                 sourceImp.getProcessor(), targetImp.getProcessor());
 
         // Initial affine transform correction values
-        warp.setAnisotropyCorrection( parameter.getAnisotropyCorrection() );
-        warp.setScaleCorrection( parameter.getScaleCorrection() );
-        warp.setShearCorrection( parameter.getShearCorrection() );
+        if ((sourceAffineMatrix == null) && (targetAffineMatrix == null)) {
+            warp.setAnisotropyCorrection(parameter.getAnisotropyCorrection());
+            warp.setScaleCorrection(parameter.getScaleCorrection());
+            warp.setShearCorrection(parameter.getShearCorrection());
+        }
 
         IJ.log("\nRegistering...\n");
 
@@ -895,9 +570,7 @@ public class bUnwarpJ_ implements PlugIn
         IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
 
         return warp;
-
-    } // end computeTransformationBatch
-
+    }
     
     //------------------------------------------------------------------
     /**
@@ -953,7 +626,7 @@ public class bUnwarpJ_ implements PlugIn
        output_ip[0] = warp.getDirectResults();       
        output_ip[1] = warp.getInverseResults();
        
-       return output_ip;       
+       return output_ip;
        
     } // end alignImagesBatch
     

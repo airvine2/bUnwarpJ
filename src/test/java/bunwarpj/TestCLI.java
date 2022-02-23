@@ -2,6 +2,8 @@ package bunwarpj;
 
 import ij.IJ;
 import ij.ImageJ;
+import ij.ImagePlus;
+import ij.io.FileSaver;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -40,7 +42,7 @@ public class TestCLI {
             List<TestImage> sourceImages = new ArrayList<>();
 
             for (int i=0; i< csvImageFiles.size(); i++) {
-                int[][] curImageMtx = importMtxFromCsv(csvImageFiles.get(i), dataFolder);
+                double[][] curImageMtx = importMtxFromCsv(csvImageFiles.get(i), dataFolder);
                 TestImage curImage = new TestImage(curImageMtx, csvImageFiles.get(i), dataFolder);
 
                 if (csvImageFiles.get(i).contains("train")) {
@@ -57,8 +59,13 @@ public class TestCLI {
             Transformation tResult = bUnwarpJ_.computeTransformationBatch(
                     targetImages.get(0).imageMtx, sourceImages.get(0).imageMtx, bParams);
 
+            double[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(tResult, sourceImages.get(0).imageMtx);
 
+            ImagePlus warpedImp = MiscTools.createImagePlusByte(warpedImageMtx, "warped source image");
 
+            FileSaver fs = new FileSaver(warpedImp);
+            String tmpImgFile = dataFolder + "/warped-source-image.png";
+            fs.saveAsPng(tmpImgFile);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -86,21 +93,21 @@ public class TestCLI {
 
     }
 
-    private static int[][] importMtxFromCsv(String fileName, String folderPath) throws IOException {
+    private static double[][] importMtxFromCsv(String fileName, String folderPath) throws IOException {
         Scanner sc = new Scanner(new File(folderPath + "\\" + fileName));
         sc.useDelimiter(",");
 
-        List<int[]> inputList = new ArrayList<>();
+        List<double[]> inputList = new ArrayList<>();
         while (sc.hasNextLine())
         {
             String[] curLine = sc.next().split(",");
-            int[] lineValues = Arrays.stream(curLine).map((x) -> Double.parseDouble(x))
-                    .mapToInt(d -> (int)Math.round(d)).toArray();
+            double[] lineValues = Arrays.stream(curLine).map((x) -> Double.parseDouble(x))
+                    .mapToDouble(d -> d).toArray();
             inputList.add(lineValues);
         }
         sc.close();
 
-        int[][] result = inputList.toArray(new int[inputList.size()][]);
+        double[][] result = inputList.toArray(new double[inputList.size()][]);
         return (result);
     }
 
@@ -109,11 +116,11 @@ public class TestCLI {
 }
 
 class TestImage {
-    int[][] imageMtx;
+    double[][] imageMtx;
     String fileName;
     String containingFolder;
 
-    public TestImage(int[][] imageMtx, String fileName, String containingFolder) {
+    public TestImage(double[][] imageMtx, String fileName, String containingFolder) {
         this.imageMtx = imageMtx;
         this.fileName = fileName;
         this.containingFolder = containingFolder;
