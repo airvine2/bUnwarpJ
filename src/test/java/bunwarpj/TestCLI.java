@@ -42,7 +42,7 @@ public class TestCLI {
             List<TestImage> sourceImages = new ArrayList<>();
 
             for (int i=0; i< csvImageFiles.size(); i++) {
-                double[][] curImageMtx = importMtxFromCsv(csvImageFiles.get(i), dataFolder);
+                double[][] curImageMtx = importMtxFromCsv(csvImageFiles.get(i));
                 TestImage curImage = new TestImage(curImageMtx, csvImageFiles.get(i), dataFolder);
 
                 if (csvImageFiles.get(i).contains("train")) {
@@ -56,21 +56,27 @@ public class TestCLI {
             Param bParams = new Param(1, 0, 0, 2,
                     0.1, 0.1, 0, 1, 10, 0.01);
 
-            Transformation tResult = bUnwarpJ_.computeTransformationBatch(
+            Transformation transform = bUnwarpJ_.computeTransformationBatch(
                     targetImages.get(0).imageMtx, sourceImages.get(0).imageMtx, bParams);
 
-            double[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(tResult, sourceImages.get(0).imageMtx);
+            double[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(transform, sourceImages.get(0).imageMtx);
 
-            ImagePlus warpedImp = MiscTools.createImagePlusByte(warpedImageMtx, "warped source image");
-
-            FileSaver fs = new FileSaver(warpedImp);
-            String tmpImgFile = dataFolder + "/warped-source-image.png";
-            fs.saveAsPng(tmpImgFile);
+            saveMtxAsPng(warpedImageMtx, "warped-source-image", dataFolder);
+            saveMtxAsPng(sourceImages.get(0).imageMtx, "source-image", dataFolder);
+            saveMtxAsPng(targetImages.get(0).imageMtx, "target-image", dataFolder);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    private static void saveMtxAsPng(double[][] inputMtx, String fileName, String folder) {
+        ImagePlus mtxAsImp = MiscTools.createImagePlusByte(inputMtx, fileName);
+
+        FileSaver fs = new FileSaver(mtxAsImp);
+        String tmpImgFile = folder + "/" + fileName + ".png";
+        fs.saveAsPng(tmpImgFile);
     }
 
     private static List<String> findFilesOfType(String folderPath, String fileExtension) throws IOException {
@@ -93,14 +99,15 @@ public class TestCLI {
 
     }
 
-    private static double[][] importMtxFromCsv(String fileName, String folderPath) throws IOException {
-        Scanner sc = new Scanner(new File(folderPath + "\\" + fileName));
-        sc.useDelimiter(",");
+    private static double[][] importMtxFromCsv(String fileName) throws IOException {
+        Scanner sc = new Scanner(new File(fileName));
 
         List<double[]> inputList = new ArrayList<>();
         while (sc.hasNextLine())
         {
-            String[] curLine = sc.next().split(",");
+            String curLineStr = sc.nextLine();
+            String[] curLine = curLineStr.split(",");
+
             double[] lineValues = Arrays.stream(curLine).map((x) -> Double.parseDouble(x))
                     .mapToDouble(d -> d).toArray();
             inputList.add(lineValues);
@@ -110,15 +117,14 @@ public class TestCLI {
         double[][] result = inputList.toArray(new double[inputList.size()][]);
         return (result);
     }
-
-
-
+    
 }
 
 class TestImage {
     double[][] imageMtx;
     String fileName;
     String containingFolder;
+    boolean is2D = true;
 
     public TestImage(double[][] imageMtx, String fileName, String containingFolder) {
         this.imageMtx = imageMtx;

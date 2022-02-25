@@ -3075,7 +3075,14 @@ public class MiscTools
 			double [][]cy)
 	{
 		BSplineModel source = new BSplineModel (sourceImp.getProcessor(), false, 1);
-		
+		source.setPyramidDepth(0);
+		source.startPyramids();
+		try {
+			source.getThread().join();
+		} catch (InterruptedException var8) {
+			IJ.error("Unexpected interruption exception " + var8);
+		}
+
 		ImageProcessor result_imp = applyTransformationMT(sourceImp, targetImp, source, intervals, cx, cy);
 
 		sourceImp.setProcessor(sourceImp.getTitle(), result_imp);
@@ -3366,6 +3373,12 @@ public class MiscTools
 
 		BSplineModel source = new BSplineModel(imageMtx, false);
 		source.setPyramidDepth(0);
+		source.startPyramids();
+		try {
+			source.getThread().join();
+		} catch (InterruptedException var8) {
+			IJ.error("Unexpected interruption exception " + var8);
+		}
 
 		final int targetHeight = imageMtx.length;
 		final int targetWidth  = imageMtx[0].length;
@@ -3374,8 +3387,12 @@ public class MiscTools
 				aTransform.getDirectDeformationCoefficientsX(), aTransform.getDirectDeformationCoefficientsY(),
 				targetWidth, targetHeight);
 
+		ByteProcessor bp = new ByteProcessor(ip,false);
+		//scale input argument above doesn't work very well, so we will do it manually
+		bp.setMinAndMax(0, 255);
+
 		double[][] result = new double[ip.getHeight()][ip.getWidth()];
-		extractImage(ip, result);
+		extractImage(bp, result);
 		return result;
 
 	}
