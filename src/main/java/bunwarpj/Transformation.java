@@ -672,7 +672,8 @@ public class Transformation
 
 				// Optimize deformation coefficients
 				//if (imageWeight!=0)
-				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource, cxSourceToTarget, cySourceToTarget);
+				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource, cxSourceToTarget,
+						cySourceToTarget, targetWidth > 1, targetHeight > 1);
 			}
 
 			// Prepare for next iteration
@@ -734,10 +735,10 @@ public class Transformation
 					sourceFactorWidth  = source.getFactorWidth();
 
 					// Adapt the transformation to the new image size
-					double targetFactorY = (targetCurrentHeight-1) / (oldTargetCurrentHeight-1);
-					double targetFactorX = (targetCurrentWidth -1) / (oldTargetCurrentWidth -1);
-					double sourceFactorY = (sourceCurrentHeight-1) / (oldSourceCurrentHeight-1);
-					double sourceFactorX = (sourceCurrentWidth -1) / (oldSourceCurrentWidth -1);
+					double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
+					double targetFactorX = (targetCurrentWidth -1) / Math.max((oldTargetCurrentWidth -1), 1.0);
+					double sourceFactorY = (sourceCurrentHeight-1) / Math.max((oldSourceCurrentHeight-1), 1.0);
+					double sourceFactorX = (sourceCurrentWidth -1) / Math.max((oldSourceCurrentWidth -1), 1.0);
 
 					for (int i=0; i<intervals+3; i++)
 						for (int j=0; j<intervals+3; j++)
@@ -768,10 +769,10 @@ public class Transformation
 			if(source.isSubOutput() || target.isSubOutput())
 				IJ.log("Adapting coefficients from " + this.sourceCurrentWidth + " to " + source.getOriginalImageWidth() +"...");
 			// Adapt the transformation to the new image size
-			double targetFactorY = (target.getOriginalImageHeight() - 1) / (targetCurrentHeight-1);
-			double targetFactorX = (target.getOriginalImageWidth()  - 1) / (targetCurrentWidth -1);
-			double sourceFactorY = (source.getOriginalImageHeight() - 1) / (sourceCurrentHeight-1);
-			double sourceFactorX = (source.getOriginalImageWidth()  - 1) / (sourceCurrentWidth -1);
+			double targetFactorY = (target.getOriginalImageHeight() - 1) / Math.max((targetCurrentHeight-1), 1.0);
+			double targetFactorX = (target.getOriginalImageWidth()  - 1) / Math.max((targetCurrentWidth -1), 1.0);
+			double sourceFactorY = (source.getOriginalImageHeight() - 1) / Math.max((sourceCurrentHeight-1), 1.0);
+			double sourceFactorX = (source.getOriginalImageWidth()  - 1) / Math.max((sourceCurrentWidth -1), 1.0);
 
 			for (int i=0; i<intervals+3; i++)
 				for (int j=0; j<intervals+3; j++)
@@ -948,7 +949,8 @@ public class Transformation
 				}
 						
 				// Optimize deformation coefficients
-				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource);
+				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
+						targetWidth > 1, targetHeight > 1);
 				
 				
 				
@@ -1008,8 +1010,8 @@ public class Transformation
 					sourceFactorWidth  = source.getFactorWidth();
 
 					// Adapt the transformation to the new image size
-					double targetFactorY = (targetCurrentHeight-1) / (oldTargetCurrentHeight-1);
-					double targetFactorX = (targetCurrentWidth -1) / (oldTargetCurrentWidth -1);
+					double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
+					double targetFactorX = (targetCurrentWidth -1) / Math.max(oldTargetCurrentWidth -1, 1.0);
 
 					for (int i=0; i<intervals+3; i++)
 						for (int j=0; j<intervals+3; j++)
@@ -1646,8 +1648,9 @@ public class Transformation
 		if(bIsReverse) P11_SourceToTarget = P11;
 		else           P11_TargetToSource = P11;
 
-		for (int i=0; i<M2; i++)
-			for (int j=0; j<M2; j++) P11[i][j]=0.0;
+		//the default value of elements in a double array is 0, initializing to 0 is not necessary
+//		for (int i=0; i<M2; i++)
+//			for (int j=0; j<M2; j++) P11[i][j]=0.0;
 		build_Matrix_Rq1q2(intervals, divWeight           , 2, 0, P11, bIsReverse);
 		build_Matrix_Rq1q2(intervals, divWeight+curlWeight, 1, 1, P11, bIsReverse);
 		build_Matrix_Rq1q2(intervals,           curlWeight, 0, 2, P11, bIsReverse);
@@ -1657,8 +1660,8 @@ public class Transformation
 		if(bIsReverse) P22_SourceToTarget = P22;
 		else           P22_TargetToSource = P22;
 
-		for (int i=0; i<M2; i++)
-			for (int j=0; j<M2; j++) P22[i][j]=0.0;
+//		for (int i=0; i<M2; i++)
+//			for (int j=0; j<M2; j++) P22[i][j]=0.0;
 		build_Matrix_Rq1q2(intervals, divWeight           , 0, 2, P22, bIsReverse);
 		build_Matrix_Rq1q2(intervals, divWeight+curlWeight, 1, 1, P22, bIsReverse);
 		build_Matrix_Rq1q2(intervals,           curlWeight, 2, 0, P22, bIsReverse);
@@ -1668,8 +1671,8 @@ public class Transformation
 		if(bIsReverse) P12_SourceToTarget = P12;
 		else           P12_TargetToSource = P12;
 
-		for (int i=0; i<M2; i++)
-			for (int j=0; j<M2; j++) P12[i][j]=0.0;
+//		for (int i=0; i<M2; i++)
+//			for (int j=0; j<M2; j++) P12[i][j]=0.0;
 		build_Matrix_Rq1q2q3q4(intervals, 2*divWeight , 2, 0, 1, 1, P12, bIsReverse);
 		build_Matrix_Rq1q2q3q4(intervals, 2*divWeight , 1, 1, 0, 2, P12, bIsReverse);
 		build_Matrix_Rq1q2q3q4(intervals,-2*curlWeight, 0, 2, 1, 1, P12, bIsReverse);
@@ -4237,7 +4240,9 @@ public class Transformation
 			double [][]cxTargetToSource,
 			double [][]cyTargetToSource,
 			double [][]cxSourceToTarget,
-			double [][]cySourceToTarget)
+			double [][]cySourceToTarget,
+			boolean optimizeX,
+			boolean optimizeY)
 	{
 		if (dialog!=null && dialog.isStopRegistrationSet())
 			return 0.0;
@@ -4282,8 +4287,6 @@ public class Transformation
 		CumulativeQueue lastBest=
 			new CumulativeQueue(CUMULATIVE_SIZE);
 
-		for (i=0; i<M; i++) optimize[i] = true;
-
 		/* Form the vector with the current guess for the optimization */
 		for (i= 0, p=0; i < intervals + 3; i++)
 			for (j = 0; j < intervals + 3; j++, p++)
@@ -4293,6 +4296,11 @@ public class Transformation
 
 				x[halfM        +p] = cyTargetToSource[i][j];
 				x[threeQuarterM+p] = cySourceToTarget[i][j];
+
+				optimize[p] = optimizeX;
+				optimize[quarterM+p] = optimizeX;
+				optimize[halfM + p] = optimizeY;
+				optimize[threeQuarterM+p] = optimizeY;
 			}
 
 		/* Prepare the precomputed weights for interpolation */
@@ -4523,7 +4531,9 @@ public class Transformation
 			int intervals,
 			double thChangef,
 			double [][]cxTargetToSource,
-			double [][]cyTargetToSource)
+			double [][]cyTargetToSource,
+			boolean optimizeX,
+			boolean optimizeY)
 	{
 		if(source.isSubOutput())
 		{
@@ -4565,15 +4575,14 @@ public class Transformation
 		CumulativeQueue lastBest=
 			new CumulativeQueue(CUMULATIVE_SIZE);
 
-		for (i=0; i<M; i++) 
-			optimize[i] = true;
-
 		/* Form the vector with the current guess for the optimization */
 		for (i= 0, p=0; i < intervals + 3; i++)
 			for (j = 0; j < intervals + 3; j++, p++)
 			{
 				x[         p] = cxTargetToSource[i][j];
 				x[halfM  + p] = cyTargetToSource[i][j];
+				optimize[p] = optimizeX;
+				optimize[halfM + p] = optimizeY;
 			}
 
 		/* Prepare the precomputed weights for interpolation */
@@ -5318,12 +5327,11 @@ public class Transformation
 			int nproc = Runtime.getRuntime().availableProcessors();
 
 			// We will use threads to display parts of the output image
-			int block_height = auxTargetHeight / nproc;
-			
-			int nThreads = nproc; /*(nproc > 1) ? (nproc / 2) : 1;
-			if (this.accurate_mode == MainDialog.MONO_MODE)
-				nThreads *= 2;*/
-			
+			//split rows as evenly as possible between available threads - smallest possible block height is 1
+			int block_height = Math.max(auxTargetHeight / nproc, 1);
+
+			// Use one thread for each block
+			final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
 						
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -5415,12 +5423,11 @@ public class Transformation
 			int nproc = Runtime.getRuntime().availableProcessors();
 
 			// We will use threads to display parts of the output image
-			int block_height = auxTargetHeight / nproc;
-			
-			int nThreads = nproc; /*(nproc > 1) ? (nproc / 2) : 1;
-			if (this.accurate_mode == MainDialog.MONO_MODE)
-				nThreads *= 2;*/
-			
+			//split rows as evenly as possible between available threads - smallest possible block height is 1
+			int block_height = Math.max(auxTargetHeight / nproc, 1);
+
+			// Use one thread for each block
+			final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
 						
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -6136,11 +6143,12 @@ public class Transformation
 		int nproc = Runtime.getRuntime().availableProcessors();
 
 		// We will use threads to display parts of the output image
-		int block_height = auxTargetHeight / ((int)subFactorHeight * nproc);
 
-		int nThreads = nproc; /*(nproc > 1) ? (nproc / 2) : 1;
-		if (this.accurate_mode == MainDialog.MONO_MODE)
-			nThreads *= 2;*/
+		//split rows as evenly as possible between available threads - smallest possible block height is 1
+		int block_height = Math.max(auxTargetHeight / ((int)subFactorHeight * nproc), 1);
+
+		// Use one thread for each block
+		final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
 		
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -6573,12 +6581,13 @@ public class Transformation
 			// Check the number of processors in the computer 
 			final int nproc = Runtime.getRuntime().availableProcessors();
 
-			// We will use threads to calculate the similarity of the different 
-			// parts of the target and source image
-			int block_height = auxTargetCurrentHeight / nproc;
+			// We will use threads to calculate the similarity of the different parts of the target and source image
 
-			// We use as many threads as processors
-			final int nThreads = nproc; 
+			//split rows as evenly as possible between available threads - smallest possible block height is 1
+			int block_height = Math.max(targetHeight / nproc, 1);
+
+			// We use as many threads as blocks
+			final int nThreads = Math.min(nproc, targetHeight/block_height);
 			
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -6988,13 +6997,19 @@ public class Transformation
 		// Check the number of processors in the computer 
 		final int nproc = Runtime.getRuntime().availableProcessors();
 
-		// We will use threads to calculate the similarity of the different 
-		// parts of the target and source image
-		int block_height_target = this.targetCurrentHeight / nproc;
-		int block_height_source = this.sourceCurrentHeight / nproc;
+		// We will use threads to calculate the similarity of the different parts of the target and source image
 
-		// We use as many threads as processors
-		final int nThreads = nproc; 
+		//split rows as evenly as possible between available threads - smallest possible block height is 1
+		int block_height_target = Math.max(this.targetCurrentHeight / nproc, 1);
+		int block_height_source = Math.max(this.sourceCurrentHeight / nproc, 1);
+
+		//determine how many threads we need
+		// Use one thread for each block
+		final int nThreads = Math.min(nproc, Math.min(targetHeight/block_height_source, targetHeight/block_height_target));
+		//recalculate block heights using the final calculated value for nThreads
+		block_height_target = this.targetCurrentHeight / nThreads;
+		block_height_source = this.sourceCurrentHeight / nThreads;
+
 		
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rect_target = new Rectangle[nThreads];

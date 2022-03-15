@@ -433,7 +433,32 @@ public class BSplineModel implements Runnable
 		imgpyramid.removeAllElements();
 	} /* end clearPyramid */
 
-	
+	//------------------------------------------------------------------
+	/**
+	 * Return the min allowed image width
+	 */
+	public int getMinImageWidth() {
+		return BSplineModel.min_image_size;
+	}
+
+	//------------------------------------------------------------------
+	/**
+	 * Return the min allowed image height
+	 * if the input data was a 1D array, we will allow height to remain 1
+	 * and not impose the min_image_size constraint on height
+	 */
+	public int getMinImageHeight() {
+		if (!is2D()) {
+			return(1);
+		} else {
+			return BSplineModel.min_image_size;
+		}
+	}
+
+	public boolean is2D() {
+		return (height > 1);
+	}
+
 	//------------------------------------------------------------------
 	/**
 	 * Get current height.
@@ -1593,7 +1618,8 @@ public class BSplineModel implements Runnable
 		for (int v=0; v<Ydim; v++) 
 		{
 			// Express the current point in Spline units
-			final double tv = (double)(v * intervals) / (double)(Ydim - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (Ydim > 1) ? ((double)(v * intervals) / (double)(Ydim - 1) + 1.0F) : 1.0F;
 			final double tu = 1.0F;
 
 			// Compute all weights and indexes
@@ -1614,7 +1640,8 @@ public class BSplineModel implements Runnable
 		{
 			// Express the current point in Spline units
 			final double tv = 1.0F;
-			final double tu = (double)(u * intervals) / (double)(Xdim - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tu = (Xdim > 1) ? ((double)(u * intervals) / (double)(Xdim - 1) + 1.0F) : 1.0F;
 
 			// Compute all weights and indexes
 			prepareForInterpolation(tu,tv,ORIGINAL);
@@ -1715,10 +1742,10 @@ public class BSplineModel implements Runnable
 		int currentWidth = width;
 		int currentHeight = height;
 		int scale = 0;
-		while (currentWidth>=min_image_size && currentHeight>=min_image_size) 
+		while (currentWidth>=getMinImageWidth() && currentHeight>=getMinImageHeight())
 		{
 			currentWidth /= 2;
-			currentHeight /= 2;
+			currentHeight = Math.max(currentHeight/2, 1);
 			scale++;
 		}
 		scale--;
@@ -1869,10 +1896,10 @@ public class BSplineModel implements Runnable
 			fullWidth = halfWidth;
 			fullHeight = halfHeight;
 			halfWidth /= 2;
-			halfHeight /= 2;
+			halfHeight = Math.max(halfHeight/2, 1);
 			
 			// If the image is too small, we push the previous version of the coefficients
-			if(fullWidth <= BSplineModel.min_image_size || fullHeight <= BSplineModel.min_image_size)
+			if(fullWidth <= getMinImageWidth() || (this.is2D() && (fullHeight <= getMinImageHeight())))
 			{				 
 				if(this.bSubsampledOutput)
 					IJ.log("Coefficients pyramid " + fullWidth + "x" + fullHeight);
@@ -1935,10 +1962,10 @@ public class BSplineModel implements Runnable
 				fullWidth = halfWidth;
 				fullHeight = halfHeight;
 				halfWidth /= 2;
-				halfHeight /= 2;
+				halfHeight = Math.max(halfHeight/2, 1);
 				
 				// If the image is too small, we push the previous version of the coefficients
-				if(fullWidth <= BSplineModel.min_image_size || fullHeight <= BSplineModel.min_image_size)
+				if(fullWidth <= getMinImageWidth() || fullHeight <= getMinImageHeight())
 				{				 
 					if(this.bSubsampledOutput)
 						IJ.log("Coefficients pyramid " + fullWidth + "x" + fullHeight);
@@ -1996,9 +2023,9 @@ public class BSplineModel implements Runnable
 			 fullHeight = halfHeight;			 			 
 			 
 			 halfWidth /= 2;
-			 halfHeight /= 2;
+			 halfHeight = Math.max(halfHeight/2, 1);
 			 
-			 if(fullWidth <= BSplineModel.min_image_size || fullHeight <= BSplineModel.min_image_size)
+			 if(fullWidth <= getMinImageWidth() || (this.is2D() && (fullHeight <= getMinImageHeight())))
 			 {				 
 				 if(this.bSubsampledOutput)
 						IJ.log(" Image pyramid " + fullWidth + "x" + fullHeight);
@@ -2166,7 +2193,7 @@ public class BSplineModel implements Runnable
 
 	 //------------------------------------------------------------------
 	 /**
-	  * Extract a column from the array.
+	  * Extract a column from array representation of a 2D matrix
 	  *
 	  * @param array
 	  * @param width of the position of the column in the array
@@ -2185,7 +2212,7 @@ public class BSplineModel implements Runnable
 
 	 //------------------------------------------------------------------
 	 /**
-	  * Extract a row from the array .
+	  * Extract a row from the array representation of a 2D matrix
 	  *
 	  * @param array
 	  * @param y row position in the array
@@ -2197,8 +2224,7 @@ public class BSplineModel implements Runnable
 			 final double[] row)
 	 {
 		 y *= row.length;
-		 for (int i = 0; (i < row.length); i++)
-			 row[i] = (double)array[y++];
+		 System.arraycopy(array, y, row, 0, row.length);
 	 } /* end extractRow */
 
 	 //------------------------------------------------------------------
@@ -2221,6 +2247,7 @@ public class BSplineModel implements Runnable
 			 samplesToInterpolationCoefficient1D(hLine, 3, 0.0);
 			 putRow(basic, y, hLine);
 		 }
+		 //in the case of 1 row, samplesToInterpolationCoefficient1D will return without doing anything
 		 for (int x = 0; (x < width); x++) {
 			 extractColumn(basic, width, x, vLine);
 			 samplesToInterpolationCoefficient1D(vLine, 3, 0.0);
@@ -2255,10 +2282,13 @@ public class BSplineModel implements Runnable
 			 samplesToInterpolationCoefficient1D(hLine, degree, 0.0);
 			 putRow(basic, y, hLine);
 		 }
-		 for (int x = 0; ((x < width) && (!t.isInterrupted())); x++) {
-			 extractColumn(basic, width, x, vLine);
-			 samplesToInterpolationCoefficient1D(vLine, degree, 0.0);
-			 putColumn(basic, width, x, vLine);
+		 //if height is 1 this loop will just copy each value from the array back into the same array (not do anything)
+		 if (height > 1) {
+			 for (int x = 0; ((x < width) && (!t.isInterrupted())); x++) {
+				 extractColumn(basic, width, x, vLine);
+				 samplesToInterpolationCoefficient1D(vLine, degree, 0.0);
+				 putColumn(basic, width, x, vLine);
+			 }
 		 }
 		 return(basic);
 	 } /* end getBasicFromCardinal2D */
@@ -2277,7 +2307,7 @@ public class BSplineModel implements Runnable
 			 final int fullHeight)
 	 {
 		 final int halfWidth = fullWidth / 2;
-		 final int halfHeight = fullHeight / 2;
+		 final int halfHeight = Math.max(fullHeight / 2, 1);
 		 final double[] hLine = new double[fullWidth];
 		 final double[] hData = new double[halfWidth];
 		 final double[] vLine = new double[fullHeight];
@@ -2289,12 +2319,16 @@ public class BSplineModel implements Runnable
 			 reduceDual1D(hLine, hData);
 			 putRow(demiDual, y, hData);
 		 }
-		 for (int x = 0; ((x < halfWidth) && (!t.isInterrupted())); x++) {
-			 extractColumn(demiDual, halfWidth, x, vLine);
-			 reduceDual1D(vLine, vData);
-			 putColumn(halfDual, halfWidth, x, vData);
+		 if (halfHeight > 1) {
+			 for (int x = 0; ((x < halfWidth) && (!t.isInterrupted())); x++) {
+				 extractColumn(demiDual, halfWidth, x, vLine);
+				 reduceDual1D(vLine, vData);
+				 putColumn(halfDual, halfWidth, x, vData);
+			 }
+			 return(halfDual);
+		 } else {
+		 	return(demiDual);
 		 }
-		 return(halfDual);
 	 } /* end getHalfDual2D */
 
 	 //------------------------------------------------------------------
@@ -2433,6 +2467,12 @@ public class BSplineModel implements Runnable
 			 final int degree,
 			 final double tolerance)
 	 {
+		 // special case required by mirror boundaries
+		 if (c.length == 1)
+		 {
+			 return;
+		 }
+
 		 double[] z = new double[0];
 		 double lambda = 1.0;
 		 switch (degree) {
@@ -2448,11 +2488,7 @@ public class BSplineModel implements Runnable
 			 break;
 		 default:
 		 }
-		 // special case required by mirror boundaries
-		 if (c.length == 1) 
-		 {
-			 return;
-		 }
+
 		 // compute the overall gain
 		 for (int k = 0; (k < z.length); k++) 
 		 {

@@ -119,10 +119,12 @@ public class MiscTools
 		boolean ORIGINAL = false;
 		for (int v=0; v<targetHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetHeight > 1) ? ((double)(v * intervals) / (double)(targetHeight - 1) + 1.0F) : 1.0F;
 			for (int u = 0; u<targetWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetWidth > 1) ? ((double)(u * intervals) / (double)(targetWidth - 1) + 1.0F) : 1.0F;
 
 				swx.prepareForInterpolation(tu, tv, ORIGINAL);
 				transformation_x[v][u] = swx.interpolateI();
@@ -269,10 +271,12 @@ public class MiscTools
 		boolean ORIGINAL = false;
 		for (int v=0; v<targetHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetHeight > 1) ? ((double)(v * intervals) / (double)(targetHeight - 1) + 1.0F) : 1.0F;
 			for (int u = 0; u<targetWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetWidth > 1) ? ((double)(u * intervals) / (double)(targetWidth - 1) + 1.0F) : 1.0F;
 
 				swx.prepareForInterpolation(tu, tv, ORIGINAL);
 				transformation_x[v][u] = swx.interpolateI();
@@ -598,10 +602,12 @@ public class MiscTools
 		// Compute the direct transformation mapping
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx_direct.prepareForInterpolation(tu, tv, false);
 				transformation_x_direct[v][u] = swx_direct.interpolateI();
@@ -614,10 +620,12 @@ public class MiscTools
 		// Compute the inverse transformation mapping
 		for (int v=0; v<sourceCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(sourceCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (sourceCurrentHeight > 1) ? ((double)(v * intervals) / (double)(sourceCurrentHeight - 1) + 1.0F) : 1.0F;
 			for (int u = 0; u<sourceCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(sourceCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (sourceCurrentWidth > 1) ? ((double)(u * intervals) / (double)(sourceCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx_inverse.prepareForInterpolation(tu, tv, false);
 				transformation_x_inverse[v][u] = swx_inverse.interpolateI();
@@ -787,10 +795,13 @@ public class MiscTools
 		// Compute the direct transformation mapping
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
+
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx.prepareForInterpolation(tu, tv, false);
 				transformation_x[v][u] = swx.interpolateI();
@@ -1314,10 +1325,13 @@ public class MiscTools
 		// Compute the direct transformation mapping
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
+
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx_direct.prepareForInterpolation(tu, tv, false);
 				transformation_x_direct[v][u] = swx_direct.interpolateI();
@@ -2342,10 +2356,13 @@ public class MiscTools
 		// pixels of the source image.
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
+
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx2.prepareForInterpolation(tu, tv, false);
 				final double x2 = swx2.interpolateI();
@@ -2423,10 +2440,13 @@ public class MiscTools
 		// pixels of the source image.
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
+
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				// Second transformation
 				swx2.prepareForInterpolation(tu, tv, false);
@@ -2557,10 +2577,13 @@ public class MiscTools
 		// Compute the first transformation mapping
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
+
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx1.prepareForInterpolation(tu, tv, false);
 				transformation_x_1[v][u] = swx1.interpolateI();
@@ -2573,10 +2596,12 @@ public class MiscTools
 		// Compute the second transformation mapping
 		for (int v=0; v<targetCurrentHeight; v++)
 		{
-			final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+			//prevent NaN result from divide by 0
+			final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
 			for (int u = 0; u<targetCurrentWidth; u++)
 			{
-				final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 
 				swx2.prepareForInterpolation(tu, tv, false);
 				transformation_x_2[v][u] = swx2.interpolateI();
@@ -3190,13 +3215,16 @@ public class MiscTools
 
 		FloatProcessor fp = new FloatProcessor(targetWidth, targetHeight);
 
-		// Check the number of processors in the computer
-		int nproc = Runtime.getRuntime().availableProcessors();
-
 		// We will use threads to display parts of the output image
-		int block_height = targetHeight / nproc;
 
-		int nThreads = nproc;
+		// Check the number of processors in the computer
+		final int nproc = Runtime.getRuntime().availableProcessors();
+
+		//split rows as evenly as possible between available threads - smallest possible block height is 1
+		int block_height = Math.max(targetHeight / nproc, 1);
+
+		// Use one thread for each block
+		final int nThreads = Math.min(nproc, targetHeight/block_height);
 
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -3294,13 +3322,16 @@ public class MiscTools
 		FloatProcessor fpG = new FloatProcessor(targetWidth, targetHeight);
 		FloatProcessor fpB = new FloatProcessor(targetWidth, targetHeight);
 
+		// We will use threads to display parts of the output image
+
 		// Check the number of processors in the computer
 		int nproc = Runtime.getRuntime().availableProcessors();
 
-		// We will use threads to display parts of the output image
-		int block_height = targetHeight / nproc;
+		//split rows as evenly as possible between available threads - smallest possible block height is 1
+		int block_height = Math.max(targetHeight / nproc, 1);
 
-		int nThreads = nproc;
+		// Use one thread for each block
+		final int nThreads = Math.min(nproc, targetHeight/block_height);
 
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -3473,12 +3504,14 @@ public class MiscTools
 			for (int v_rect = 0, v=rect.y; v<auxTargetHeight; v++, v_rect++)
 			{
 				final int v_offset = v_rect * rect.width;
-				final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
 				
 				for (int u_rect = 0, u=rect.x; u<auxTargetWidth; u++, u_rect++) 
 				{
 
-					final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;			
+					//prevent NaN result from divide by 0
+					final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 					final double transformation_x_v_u = swx.prepareForInterpolationAndInterpolateI(tu, tv, false, false);
 					final double transformation_y_v_u = swy.prepareForInterpolationAndInterpolateI(tu, tv, false, false);
 									
@@ -3601,12 +3634,13 @@ public class MiscTools
 			for (int v_rect = 0, v=rect.y; v<auxTargetHeight; v++, v_rect++)
 			{
 				final int v_offset = v_rect * rect.width;
-				final double tv = (double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F;
+				//prevent NaN result from divide by 0
+				final double tv = (targetCurrentHeight > 1) ? ((double)(v * intervals) / (double)(targetCurrentHeight - 1) + 1.0F) : 1.0F;
 				
 				for (int u_rect = 0, u=rect.x; u<auxTargetWidth; u++, u_rect++) 
 				{
-
-					final double tu = (double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F;
+					//prevent NaN result from divide by 0
+					final double tu = (targetCurrentWidth > 1) ? ((double)(u * intervals) / (double)(targetCurrentWidth - 1) + 1.0F) : 1.0F;
 					
 					final double x = swx.prepareForInterpolationAndInterpolateI(tu, tv, false, false);
 					final double y = swy.prepareForInterpolationAndInterpolateI(tu, tv, false, false);														
