@@ -473,8 +473,8 @@ public class bUnwarpJ_ implements PlugIn
      *
      * @return results transformation object
      */
-    public static Transformation computeTransformationBatch(double[][] targetImageMtx,
-                                                            double[][] sourceImageMtx,
+    public static Transformation computeTransformationBatch(int[][] targetImageMtx,
+                                                            int[][] sourceImageMtx,
                                                             Param parameter)
     {
         if(targetImageMtx == null || sourceImageMtx == null || parameter == null)

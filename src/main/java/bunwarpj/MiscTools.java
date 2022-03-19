@@ -1753,14 +1753,14 @@ public class MiscTools
 	 * @param image input, the image in a double[][]
 	 * @param imageTitle input, the title to assign to the resulting ImagePlus
 	 */
-	static public ImagePlus createImagePlusByte(double image[][], String imageTitle)
+	static public ImagePlus createImagePlusByte(int image[][], String imageTitle)
 	{
 		int height=image.length;
 		int width =image[0].length;
 		ByteProcessor imageProcByte = new ByteProcessor(width, height);
 		for (int y = 0; (y < height); y++) {
 			for (int x = 0; (x < width); x++) {
-				imageProcByte.set(x,y,(int)Math.round(image[y][x]));
+				imageProcByte.set(x,y,image[y][x]);
 			}
 		}
 		return(new ImagePlus(imageTitle,imageProcByte));
@@ -3400,7 +3400,7 @@ public class MiscTools
 	 *
 	 * @return result transformed image as a matrix
 	 */
-	public static double[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, double[][] imageMtx) {
+	public static int[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, int[][] imageMtx) {
 
 		BSplineModel source = new BSplineModel(imageMtx, false);
 		source.setPyramidDepth(0);
@@ -3422,7 +3422,7 @@ public class MiscTools
 		//scale input argument above doesn't work very well, so we will do it manually
 		bp.setMinAndMax(0, 255);
 
-		double[][] result = new double[ip.getHeight()][ip.getWidth()];
+		int[][] result = new int[ip.getHeight()][ip.getWidth()];
 		extractImage(bp, result);
 		return result;
 

@@ -5264,7 +5264,7 @@ public class Transformation
 	 * 
 	 * @return output images (depending on the output level)
 	 */
-	private ImagePlus applyTransformationMultiThread(
+	public ImagePlus applyTransformationMultiThread(
 			final int   intervals,
 			final double [][]cx,    // Input, spline coefficients
 			final double [][]cy,
