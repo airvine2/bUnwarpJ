@@ -4284,8 +4284,16 @@ public class Transformation
 		lambda = FIRSTLAMBDA, max_normx, distx, aux, gmax;
 		double     fac, fae, dgdx, dxHdx, sumdiffg, sumdiffx;
 
-		CumulativeQueue lastBest=
-			new CumulativeQueue(CUMULATIVE_SIZE);
+		CumulativeQueue lastBest = new CumulativeQueue(CUMULATIVE_SIZE);
+
+		//specify which x coefficients we should continue to optimize
+		for (i = 0; i < halfM; i++) {
+			optimize[i] = optimizeX;
+		}
+		//specify which y coefficients we should continue to optimize
+		for (i = halfM; i < M; i++) {
+			optimize[i] = optimizeY;
+		}
 
 		/* Form the vector with the current guess for the optimization */
 		for (i= 0, p=0; i < intervals + 3; i++)
@@ -4296,11 +4304,6 @@ public class Transformation
 
 				x[halfM        +p] = cyTargetToSource[i][j];
 				x[threeQuarterM+p] = cySourceToTarget[i][j];
-
-				optimize[p] = optimizeX;
-				optimize[quarterM+p] = optimizeX;
-				optimize[halfM + p] = optimizeY;
-				optimize[threeQuarterM+p] = optimizeY;
 			}
 
 		/* Prepare the precomputed weights for interpolation */
@@ -4572,8 +4575,16 @@ public class Transformation
 		lambda = FIRSTLAMBDA, max_normx, distx, aux, gmax;
 		double     fac, fae, dgdx, dxHdx, sumdiffg, sumdiffx;
 
-		CumulativeQueue lastBest=
-			new CumulativeQueue(CUMULATIVE_SIZE);
+		CumulativeQueue lastBest = new CumulativeQueue(CUMULATIVE_SIZE);
+
+		//specify which x coefficients we should continue to optimize
+		for (i = 0; i < halfM; i++) {
+			optimize[i] = optimizeX;
+		}
+		//specify which y coefficients we should continue to optimize
+		for (i = halfM; i < M; i++) {
+			optimize[i] = optimizeY;
+		}
 
 		/* Form the vector with the current guess for the optimization */
 		for (i= 0, p=0; i < intervals + 3; i++)
@@ -4581,8 +4592,6 @@ public class Transformation
 			{
 				x[         p] = cxTargetToSource[i][j];
 				x[halfM  + p] = cyTargetToSource[i][j];
-				optimize[p] = optimizeX;
-				optimize[halfM + p] = optimizeY;
 			}
 
 		/* Prepare the precomputed weights for interpolation */
@@ -6584,10 +6593,10 @@ public class Transformation
 			// We will use threads to calculate the similarity of the different parts of the target and source image
 
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
-			int block_height = Math.max(targetHeight / nproc, 1);
+			int block_height = Math.max(auxTargetCurrentHeight / nproc, 1);
 
 			// We use as many threads as blocks
-			final int nThreads = Math.min(nproc, targetHeight/block_height);
+			final int nThreads = Math.min(nproc, auxTargetCurrentHeight/block_height);
 			
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
