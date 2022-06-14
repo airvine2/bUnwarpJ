@@ -123,11 +123,11 @@ public class TestAPI {
                 0.0, 0.0, 0.0, 1, 0,
                 0.01);
 
-//        Transformation transform = bUnwarpJ_.computeTransformationBatch(
-//                targetImages.get(0).imageMtx, sourceImages.get(0).imageMtx, bParams);
-//
+        Transformation transform = bUnwarpJ_.computeTransformationBatch(
+                targetImages.get(0).imageMtx, sourceImages.get(0).imageMtx, bParams);
+
 //        double[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(transform, sourceImages.get(0).imageMtx);
-//
+
 //        saveArrayCSV(warpedImageMtx[0], dataFolder + "/warped-histogram.csv", false);
 
     }

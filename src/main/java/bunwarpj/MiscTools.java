@@ -1717,10 +1717,10 @@ public class MiscTools
 
 	//------------------------------------------------------------------
 	/**
-	 * Put the image from an ImageProcessor into a double[][].
+	 * Put the image from an ImageProcessor into a int[][]. Only valid for grayscale images
 	 *
-	 * @param ip input, origin of the image
-	 * @param image output, the image in a double[][]
+	 * @param ip input, the ImageProcessor containing the image
+	 * @param image output, the image in a int[][]
 	 */
 	static public void extractImage(final ImageProcessor ip, int image[][])
 	{
@@ -1748,9 +1748,52 @@ public class MiscTools
 
 	//------------------------------------------------------------------
 	/**
+	 * Put the image from an ImageProcessor into a 1D int array. Only valid for grayscale images
+	 *
+	 * @param ip input, the ImageProcessor containing the image
+	 * @param image output, the image in an int array, which is the 2D image matrix concatenated by row
+	 */
+	static public void extractImage(final ImageProcessor ip, int image[])
+	{
+		int k = 0;
+		int height = ip.getHeight();
+		int width = ip.getWidth();
+
+		if (ip instanceof ByteProcessor) {
+			final byte[] pixels = (byte[]) ip.getPixels();
+			for (int y = 0; (y < height); y++) {
+				for (int x = 0; (x < width); x++, k++) {
+					int arrayIdx = (y * width) + x;
+					image[arrayIdx] = (pixels[k] & 0xFF);
+				}
+			}
+		} else if (ip instanceof ShortProcessor) {
+			final short[] pixels = (short[])ip.getPixels();
+			for (int y = 0; (y < height); y++) {
+				for (int x = 0; (x < width); x++, k++) {
+					int arrayIdx = (y * width) + x;
+					if (pixels[k] < (short) 0)
+						image[arrayIdx] = (int) (pixels[k] + 65536.0F);
+					else
+						image[arrayIdx] = pixels[k];
+				}
+			}
+		} else if (ip instanceof FloatProcessor) {
+			final float[] pixels = (float[])ip.getPixels();
+			for (int y = 0; (y < height); y++) {
+				for (int x = 0; (x < width); x++, k++) {
+					int arrayIdx = (y * width) + x;
+					image[arrayIdx] = Math.round(pixels[k]);
+				}
+			}
+		}
+	}
+
+	//------------------------------------------------------------------
+	/**
 	 * Create a ByteProcessor ImagePlus from a double[][].
 	 *
-	 * @param image input, the image in a double[][]
+	 * @param image input, the image in an int[][], the values should be scaled 0-255
 	 * @param imageTitle input, the title to assign to the resulting ImagePlus
 	 */
 	static public ImagePlus createImagePlusByte(int image[][], String imageTitle)
@@ -3079,7 +3122,35 @@ public class MiscTools
 			}
 		
 	} // end adaptCoefficients
-	
+
+	/**
+	 * Apply the transformation to an ImagePlus
+	 * @param aTransform
+	 * @param aImage
+	 * @return
+	 */
+	public static ImagePlus applyTransformationToImagePlus(Transformation aTransform, ImagePlus aImage) {
+		ImagePlus tmpIP = aImage.duplicate();
+
+		BSplineModel source = new BSplineModel(tmpIP.getProcessor(), false, 0);
+		source.setPyramidDepth(0);
+		source.startPyramids();
+		try {
+			source.getThread().join();
+		} catch (InterruptedException var8) {
+			IJ.error("Unexpected interruption exception " + var8);
+			return(null);
+		}
+
+		int cur_intervals = aTransform.getIntervals();
+		double[][] cur_cx = aTransform.getDirectDeformationCoefficientsX();
+		double[][] cur_cy = aTransform.getDirectDeformationCoefficientsY();
+
+		MiscTools.applyTransformationToSourceMT(tmpIP, tmpIP, source, cur_intervals, cur_cx, cur_cy);
+
+		return(tmpIP);
+	}
+
 	/* --------------------------------------------------------------------*/
 	/**
 	 * Apply a given B-spline transformation to the source (gray-scale) image.
@@ -3423,6 +3494,43 @@ public class MiscTools
 		bp.setMinAndMax(0, 255);
 
 		int[][] result = new int[ip.getHeight()][ip.getWidth()];
+		extractImage(bp, result);
+		return result;
+
+	}
+
+	/**
+	 * Apply a given B-spline Transformation object to a gray-scale image.
+	 *
+	 * @param aTransform the Transformation to apply
+	 * @param imageMtx the 2D image as a 1D array of int values, concatenated by row, should be scaled 0-255
+	 *
+	 * @return result transformed image as a matrix concatenated by row into a 1D array
+	 */
+	public static int[] applyTransformationToGreyscaleImageMtx(Transformation aTransform, int[] imageMtx,
+																 int imgWidth, int imgHeight) {
+
+		BSplineModel source = new BSplineModel(imageMtx, imgWidth, imgHeight, false);
+		source.setPyramidDepth(0);
+		source.startPyramids();
+		try {
+			source.getThread().join();
+		} catch (InterruptedException var8) {
+			IJ.error("Unexpected interruption exception " + var8);
+		}
+
+		final int targetHeight = imgHeight;
+		final int targetWidth  = imgWidth;
+
+		ImageProcessor ip = applyTransformationCoefficientsGreyscale(source, aTransform.getIntervals(),
+				aTransform.getDirectDeformationCoefficientsX(), aTransform.getDirectDeformationCoefficientsY(),
+				targetWidth, targetHeight);
+
+		ByteProcessor bp = new ByteProcessor(ip,false);
+		//scale input argument above doesn't work very well, so we will do it manually
+		bp.setMinAndMax(0, 255);
+
+		int[] result = new int[ip.getHeight() * ip.getWidth()];
 		extractImage(bp, result);
 		return result;
 

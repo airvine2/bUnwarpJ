@@ -45,6 +45,7 @@ package bunwarpj;
 import ij.IJ;
 import ij.process.ImageProcessor;
 
+import java.util.Arrays;
 import java.util.Stack;
 
 /*====================================================================
@@ -284,9 +285,9 @@ public class BSplineModel implements Runnable
 	
 	//------------------------------------------------------------------
 	/**
-	 * The same as before, but take the image from an array.
+	 * Constructor that takes the image from a 2D int array.
 	 *
-	 * @param img image in a double array
+	 * @param img image in a 2D int array
 	 * @param isTarget enables the computation of the derivative or not
 	 */
 	public BSplineModel (
@@ -314,6 +315,47 @@ public class BSplineModel implements Runnable
 		this.originalWidth = this.width;
 		this.originalHeight = this.height;
 		
+		// Resize the speedup arrays
+		xIndex    = new int[4];
+		yIndex    = new int[4];
+		xWeight   = new double[4];
+		yWeight   = new double[4];
+		dxWeight  = new double[4];
+		dyWeight  = new double[4];
+		d2xWeight = new double[4];
+		d2yWeight = new double[4];
+	} // end BSplineModel
+
+	//------------------------------------------------------------------
+	/**
+	 * Constructor that takes the 2D image from a 1D int array. Internally the image is stored as a 1D array.
+	 * @param img image in a 1D int array, where the rows are concatenated
+	 * @param imgWidth the width of the image if it was converted to 2D format (number of columns)
+	 * @param imgHeight the height of the image if it was converted to 2D format (number of rows)
+	 * @param isTarget enables the computation of the derivative or not
+	 */
+	public BSplineModel (
+			final int []img,
+			final int imgWidth,
+			final int imgHeight,
+			final boolean isTarget)
+	{
+		// Initialize thread
+		t = new Thread(this);
+		t.setDaemon(true);
+
+		// Get image information
+		this.isTarget = isTarget;
+		width         = imgWidth;
+		height        = imgHeight;
+		coefficientsAreMirrored = true;
+
+		// Copy the pixel array
+		this.image = Arrays.stream(img).asDoubleStream().toArray();
+		this.original_image = this.image;
+		this.originalWidth = this.width;
+		this.originalHeight = this.height;
+
 		// Resize the speedup arrays
 		xIndex    = new int[4];
 		yIndex    = new int[4];

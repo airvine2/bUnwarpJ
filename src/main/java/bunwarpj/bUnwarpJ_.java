@@ -483,19 +483,16 @@ public class bUnwarpJ_ implements PlugIn
             return null;
         }
 
-        // Create target image model
-        final BSplineModel target = new BSplineModel(targetImageMtx, true);
-
         // Create source image model
         final BSplineModel source = new BSplineModel(sourceImageMtx, true);
-
         ImagePlus sourceImp = MiscTools.createImagePlusByte(sourceImageMtx, "source image");
-        ImagePlus targetImp = MiscTools.createImagePlusByte(sourceImageMtx, "target image");
-
-        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
         final Mask sourceMsk = new Mask(sourceImageMtx[0].length, sourceImageMtx.length);
-
         PointHandler sourcePh  = new PointHandler(sourceImp);
+
+        // Create target image model
+        final BSplineModel target = new BSplineModel(targetImageMtx, true);
+        ImagePlus targetImp = MiscTools.createImagePlusByte(targetImageMtx, "target image");
+        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
         PointHandler targetPh  = new PointHandler(targetImp);
 
         final Transformation warp =  computeTransformation(target, source, parameter, targetImp, sourceImp, targetMsk,

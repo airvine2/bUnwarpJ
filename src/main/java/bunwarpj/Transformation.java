@@ -59,7 +59,9 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Vector;
 
 
@@ -214,6 +216,8 @@ public class Transformation
 	private int     outputLevel;
 	/** flag to show the optimizer */
 	private boolean showMarquardtOptim;
+	/** flag to save error function value at each iteration of optimization */
+	public boolean saveMarquardtOptim;
 	/** divergence weight */
 	private double  divWeight;
 	/** curl weight */
@@ -268,6 +272,9 @@ public class Transformation
 	private double  [][]P22_TargetToSource;
 	/** regularization P12 (target to source) matrix */
 	private double  [][]P12_TargetToSource;
+
+	/** the error value at each iteration of optimization */
+	private List<Double> optimizationErrorValues = new ArrayList<>();
 
 	/*....................................................................
        Public methods
@@ -478,7 +485,10 @@ public class Transformation
 	 * algorithm to the selected source and target images.
 	 */
 	public void doBidirectionalRegistration ()
-	{	
+	{
+
+		optimizationErrorValues = new ArrayList<>();
+
 		// This function can only be applied with splines of an odd order
 
 		// Bring into consideration the image/coefficients at the smallest scale
@@ -515,6 +525,7 @@ public class Transformation
 		final int K;
 		if (targetPh!=null) K = targetPh.getPoints().size();
 		else                K = 0;
+
 		double [] dxTargetToSource = new double[K];
 		double [] dyTargetToSource = new double[K];
 		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
@@ -551,8 +562,6 @@ public class Transformation
 				cyTargetToSource[i][j] = yv + affineMatrix[1][0] * u;
 			}
 		}
-
-	
 
 		// Compute the affine transformation FROM THE SOURCE TO THE TARGET coordinates
 		// Notice again that this matrix is independent of the scale, but the residues are not
@@ -824,6 +833,8 @@ public class Transformation
 	{		
 		// This function can only be applied with splines of an odd order
 
+		optimizationErrorValues = new ArrayList<>();
+
 		// Bring into consideration the image/coefficients at the smallest scale
 		source.popFromPyramid();
 		target.popFromPyramid();
@@ -1076,7 +1087,298 @@ public class Transformation
 		}
 		
 	} /* end doUnidirectionalRegistration */
-	
+
+	//------------------------------------------------------------------
+	/**
+	 * Initialization for the Unidirectional registration method. Used for testing
+	 * It applies unidirectional
+	 * elastic registration to the selected source and target images.
+	 */
+	public void doUnidirectionalRegistration_Setup()
+	{
+		// This function can only be applied with splines of an odd order
+
+		// Bring into consideration the image/coefficients at the smallest scale
+		source.popFromPyramid();
+		target.popFromPyramid();
+
+		targetCurrentHeight = target.getCurrentHeight();
+		targetCurrentWidth  = target.getCurrentWidth();
+
+		targetFactorHeight  = target.getFactorHeight();
+		targetFactorWidth   = target.getFactorWidth();
+
+		sourceCurrentHeight = source.getCurrentHeight();
+		sourceCurrentWidth  = source.getCurrentWidth();
+
+		sourceFactorHeight  = source.getFactorHeight();
+		sourceFactorWidth   = source.getFactorWidth();
+
+		// size correction factor
+		int sizeCorrectionFactor = 0; //this.targetHeight / (1024  * (int) Math.pow(2, this.maxImageSubsamplingFactor));
+		//System.out.println("Size correction factor = " + sizeCorrectionFactor);
+
+		// Ask memory for the transformation coefficients
+		intervals = (int)Math.pow(2, min_scale_deformation + sizeCorrectionFactor);
+
+		cxTargetToSource = new double[intervals+3][intervals+3];
+		cyTargetToSource = new double[intervals+3][intervals+3];
+
+		// Build matrices for computing the regularization
+		buildRegularizationTemporary(intervals, false);
+
+//		// Ask for memory for the residues
+//		final int K;
+//		if (targetPh!=null) K = targetPh.getPoints().size();
+//		else                K = 0;
+//		double [] dxTargetToSource = new double[K];
+//		double [] dyTargetToSource = new double[K];
+//		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
+
+		// Compute the affine transformation FROM THE TARGET TO THE SOURCE coordinates
+		// Notice that this matrix is independent of the scale (unless it was loaded from
+		// file), but the residues are not
+		double[][] affineMatrix = null;
+		if(this.sourceAffineMatrix != null)
+		{
+			affineMatrix = this.sourceAffineMatrix;
+			// Scale translations in the matrix.
+			affineMatrix[0][2] *= this.sourceFactorWidth;
+			affineMatrix[1][2] *= this.sourceFactorHeight;
+		}
+		else
+		{
+			// NOTE: after version 1.1 the landmarks are always used to calculate
+			// an initial affine transformation (whether the landmarks weight is 0 or not).
+
+			affineMatrix = computeAffineMatrix(false);
+		}
+
+		//MiscTools.printMatrix("source affine matrix", affineMatrix);
+
+
+		// Incorporate the affine transformation into the spline coefficient
+		for (int i= 0; i<intervals + 3; i++)
+		{
+			final double v = (double)((i - 1) * (targetCurrentHeight - 1)) / (double)intervals;
+			final double xv = affineMatrix[0][2] + affineMatrix[0][1] * v;
+			final double yv = affineMatrix[1][2] + affineMatrix[1][1] * v;
+			for (int j = 0; j < intervals + 3; j++)
+			{
+				final double u = (double)((j - 1) * (targetCurrentWidth - 1)) / (double)intervals;
+				cxTargetToSource[i][j] = xv + affineMatrix[0][0] * u;
+				cyTargetToSource[i][j] = yv + affineMatrix[1][0] * u;
+			}
+		}
+
+	}
+
+	/**
+	 * Second part of the Unidirectional registration method. Used for testing
+	 * It applies unidirectional
+	 * elastic registration to the selected source and target images.
+	 */
+	public void doUnidirectionalRegistration_Optimization()
+	{
+		// This function can only be applied with splines of an odd order
+		optimizationErrorValues = new ArrayList<>();
+
+		// residues
+		final int K;
+		if (targetPh!=null) K = targetPh.getPoints().size();
+		else                K = 0;
+		double [] dxTargetToSource = new double[K];
+		double [] dyTargetToSource = new double[K];
+		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
+
+		// Now refine with the different scales
+		// state= 0 --> Increase deformation detail
+		// state= 1 --> Increase image detail
+		// state= 2 --> Do nothing until the finest image scale
+		int state;   // state=-1 --> Finish
+		if (min_scale_deformation==max_scale_deformation) state=1;
+		else                                              state=0;
+
+		int s = min_scale_deformation;
+		int step = 0;
+		computeTotalWorkload();
+
+		while (state != -1)
+		{
+			int currentDepth = target.getCurrentDepth();
+
+			// Update the deformation coefficients only in states 0 and 1
+			if (state==0 || state==1)
+			{
+				// Update the deformation coefficients with the error of the landmarks
+				// The following conditional is now useless but it is there to allow
+				// easy changes like applying the landmarks only in the coarsest deformation
+				if (s>=min_scale_deformation)
+				{
+					calculateNewCoefficients(dxTargetToSource, dyTargetToSource, s, step);
+				}
+
+				// Optimize deformation coefficients
+				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
+						targetWidth > 1, targetHeight > 1);
+
+
+
+			}
+
+			// Prepare for next iteration
+			step++;
+			switch (state)
+			{
+				case 0:
+					// Finer details in the deformation
+					if (s<max_scale_deformation)
+					{
+						cxTargetToSource = propagateCoeffsToNextLevel(intervals, cxTargetToSource, 1);
+						cyTargetToSource = propagateCoeffsToNextLevel(intervals, cyTargetToSource, 1);
+						s++;
+						intervals*=2;
+
+						// Prepare matrices for the regularization term
+						buildRegularizationTemporary(intervals, false);
+
+						if (currentDepth>min_scale_image) state=1;
+						else                              state=0;
+					} else
+					if (currentDepth>min_scale_image) state=1;
+					else                              state=2;
+					break;
+				case 1: // Finer details in the image, go on  optimizing
+				case 2: // Finer details in the image, do not optimize
+					// Compute next state
+					if (state==1) {
+						if      (s==max_scale_deformation && currentDepth==min_scale_image) state=2;
+						else if (s==max_scale_deformation)                                  state=1;
+						else                                                                state=0;
+					} else if (state==2) {
+						if (currentDepth==0) state=-1;
+						else                 state= 2;
+					}
+
+					// Pop another image and prepare the deformation
+					if (currentDepth!=0)
+					{
+						double oldTargetCurrentHeight = targetCurrentHeight;
+						double oldTargetCurrentWidth  = targetCurrentWidth;
+
+						source.popFromPyramid();
+						target.popFromPyramid();
+
+						targetCurrentHeight = target.getCurrentHeight();
+						targetCurrentWidth  = target.getCurrentWidth();
+						targetFactorHeight = target.getFactorHeight();
+						targetFactorWidth  = target.getFactorWidth();
+
+						sourceCurrentHeight = source.getCurrentHeight();
+						sourceCurrentWidth  = source.getCurrentWidth();
+						sourceFactorHeight = source.getFactorHeight();
+						sourceFactorWidth  = source.getFactorWidth();
+
+						// Adapt the transformation to the new image size
+						double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
+						double targetFactorX = (targetCurrentWidth -1) / Math.max(oldTargetCurrentWidth -1, 1.0);
+
+						for (int i=0; i<intervals+3; i++)
+							for (int j=0; j<intervals+3; j++)
+							{
+								cxTargetToSource[i][j] *= targetFactorX;
+								cyTargetToSource[i][j] *= targetFactorY;
+							}
+
+						// Prepare matrices for the regularization term
+						buildRegularizationTemporary(intervals, false);
+					}
+					break;
+			}
+
+			// In accurate_mode reduce the stopping threshold for the last iteration
+			if ((state==0 || state==1) && s==max_scale_deformation &&
+					currentDepth==min_scale_image+1 && accurate_mode==1)
+				stopThreshold /= 10;
+
+		}// end while (state != -1).
+
+		// Adapt coefficients if necessary
+		if(source.getOriginalImageWidth() > this.targetCurrentWidth)
+		{
+			if(source.isSubOutput() || target.isSubOutput())
+				IJ.log("Adapting coefficients from " + this.sourceCurrentWidth + " to " + this.originalSourceIP.getWidth() + "...");
+			// Adapt the transformation to the new image size
+			double targetFactorY = (target.getOriginalImageHeight() - 1) / (targetCurrentHeight-1);
+			double targetFactorX = (target.getOriginalImageWidth()  - 1) / (targetCurrentWidth -1);
+
+			for (int i=0; i<intervals+3; i++)
+				for (int j=0; j<intervals+3; j++)
+				{
+					cxTargetToSource[i][j] *= targetFactorX;
+					cyTargetToSource[i][j] *= targetFactorY;
+				}
+			this.targetCurrentHeight = target.getOriginalImageHeight();
+			this.targetCurrentWidth  = target.getOriginalImageWidth();
+			this.sourceCurrentHeight = source.getOriginalImageHeight();
+			this.sourceCurrentWidth  = source.getOriginalImageWidth();
+		}
+
+		// Display final errors.
+		if(this.outputLevel == 2)
+		{
+			if(this.imageWeight != 0)
+			{
+				IJ.log(" Optimal direct similarity error = " + this.finalDirectSimilarityError);
+			}
+			if(this.curlWeight != 0 || this.divWeight != 0)
+			{
+				IJ.log(" Optimal direct regularization error = " + this.finalDirectRegularizationError);
+			}
+			if(this.landmarkWeight != 0)
+			{
+				IJ.log(" Optimal direct landmark error = " + this.finalDirectLandmarkError);
+			}
+			if(this.consistencyWeight != 0)
+			{
+				IJ.log(" Optimal direct consistency error = " + this.finalDirectConsistencyError);
+			}
+		}
+
+	} /* end doUnidirectionalRegistration */
+
+	public void calculateNewCoefficients(double [] dxTargetToSource, double [] dyTargetToSource, int s, int step) {
+		// Update the deformation coefficients with the error of the landmarks
+
+		// Number of intervals at this scale and ask for memory
+		intervals = (int) Math.pow(2, s);
+		final double[][] newcxTargetToSource = new double[intervals+3][intervals+3];
+		final double[][] newcyTargetToSource = new double[intervals+3][intervals+3];
+
+		// Compute the coefficients at this scale
+		boolean underconstrained;
+		// FROM TARGET TO SOURCE.
+		if (divWeight==0 && curlWeight==0)
+			underconstrained=
+					computeCoefficientsScale(intervals, dxTargetToSource, dyTargetToSource, newcxTargetToSource, newcyTargetToSource, false);
+		else
+			underconstrained=
+					computeCoefficientsScaleWithRegularization(
+							intervals, dxTargetToSource, dyTargetToSource, newcxTargetToSource, newcyTargetToSource, false);
+
+		// Incorporate information from the previous scale
+		if (!underconstrained || (step==0 && landmarkWeight!=0))
+		{
+			for (int i=0; i<intervals+3; i++)
+				for (int j=0; j<intervals+3; j++) {
+					cxTargetToSource[i][j]+=newcxTargetToSource[i][j];
+					cyTargetToSource[i][j]+=newcyTargetToSource[i][j];
+				}
+		}
+
+	}
+
+
 
 	/*--------------------------------------------------------------------------*/
 	/**
@@ -4606,6 +4908,7 @@ public class Transformation
 		//f = evaluateSimilarity(x, intervals, grad, false, false, false);
 		f = evaluateSimilarityMultiThread(x, intervals, grad, false, false);
 
+		if (saveMarquardtOptim) optimizationErrorValues.add(f);
 		if (showMarquardtOptim) IJ.log("f(1)="+f);
 
 		/* Initially the hessian is the identity matrix multiplied by
@@ -4661,7 +4964,8 @@ public class Transformation
 			/* Estimate the new function value -------------------------------- */
 			//f = evaluateSimilarity(x, intervals, grad, false, false, false);
 			f = evaluateSimilarityMultiThread(x, intervals, grad, false, false);
-			
+			if (saveMarquardtOptim) optimizationErrorValues.add(f);
+
 			iter++;
 			if (showMarquardtOptim) 
 				IJ.log("f("+iter+")="+f+" lambda="+lambda);
@@ -7407,5 +7711,9 @@ public class Transformation
 		if(isoCorrection >= 0 && isoCorrection <= 1.0)
 			this.tweakIso = isoCorrection;
 	}
-	
+
+	public List<Double> getOptimizationErrorValues() {
+		return optimizationErrorValues;
+	}
+
 } // end class Transformation
