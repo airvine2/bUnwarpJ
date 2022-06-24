@@ -328,6 +328,49 @@ public class BSplineModel implements Runnable
 
 	//------------------------------------------------------------------
 	/**
+	 * Constructor that takes the image from a 2D float array.
+	 *
+	 * @param img image in a 2D float array
+	 * @param isTarget enables the computation of the derivative or not
+	 */
+	public BSplineModel (
+			final float [][]img,
+			final boolean isTarget)
+	{
+		// Initialize thread
+		t = new Thread(this);
+		t.setDaemon(true);
+
+		// Get image information
+		this.isTarget = isTarget;
+		width         = img[0].length;
+		height        = img.length;
+		coefficientsAreMirrored = true;
+
+		// Copy the pixel array
+		int k = 0;
+		this.image = new double[width * height];
+		for (int y = 0; (y < height); y++)
+			for (int x = 0; (x < width); x++, k++)
+				this.image[k] = img[y][x];
+
+		this.original_image = this.image;
+		this.originalWidth = this.width;
+		this.originalHeight = this.height;
+
+		// Resize the speedup arrays
+		xIndex    = new int[4];
+		yIndex    = new int[4];
+		xWeight   = new double[4];
+		yWeight   = new double[4];
+		dxWeight  = new double[4];
+		dyWeight  = new double[4];
+		d2xWeight = new double[4];
+		d2yWeight = new double[4];
+	} // end BSplineModel
+
+	//------------------------------------------------------------------
+	/**
 	 * Constructor that takes the 2D image from a 1D int array. Internally the image is stored as a 1D array.
 	 * @param img image in a 1D int array, where the rows are concatenated
 	 * @param imgWidth the width of the image if it was converted to 2D format (number of columns)
@@ -1007,6 +1050,7 @@ public class BSplineModel implements Runnable
 			currentImage = (double [])imgpyramid.pop();
 		} else currentImage = image;
 	}
+
 	//------------------------------------------------------------------
 	/**
 	 * If {@code fromCurrent} is true, the interpolation is prepared to be done
@@ -1741,7 +1785,7 @@ public class BSplineModel implements Runnable
 			}
 		}
 		coefficient = getBasicFromCardinal2D();
-		
+
 		if(coefficient != null)
 			buildCoefficientPyramid();
 		else 
@@ -1910,10 +1954,12 @@ public class BSplineModel implements Runnable
 			symmetricFirMirrorOffBounds1D(h, hLine, hData);
 			putRow(cardinal, y, hData);
 		}
-		for (int x = 0; ((x < width) && (!t.isInterrupted())); x++) {
-			extractColumn(cardinal, width, x, vLine);
-			symmetricFirMirrorOffBounds1D(h, vLine, vData);
-			putColumn(cardinal, width, x, vData);
+		if (this.is2D()) {
+			for (int x = 0; ((x < width) && (!t.isInterrupted())); x++) {
+				extractColumn(cardinal, width, x, vLine);
+				symmetricFirMirrorOffBounds1D(h, vLine, vData);
+				putColumn(cardinal, width, x, vData);
+			}
 		}
 	} /* end basicToCardinal2D */
 
@@ -1982,65 +2028,65 @@ public class BSplineModel implements Runnable
 		//	System.out.println(" subCoeffs.length = " + this.subCoeffs.length);
 	} /* end buildCoefficientPyramid */
 
-		//------------------------------------------------------------------
-		/**
-		 * Build an empty coefficient pyramid (for only-landmark registration).
-		 */
-		 private void buildEmptyCoefficientPyramid ()
-		{
-			int fullWidth;
-			int fullHeight;
+	//------------------------------------------------------------------
+	/**
+	 * Build an empty coefficient pyramid (for only-landmark registration).
+	 */
+	 private void buildEmptyCoefficientPyramid ()
+	{
+		int fullWidth;
+		int fullHeight;
 
-			int halfWidth = width;
-			int halfHeight = height;						
-			final double[] fullDual = new double[]{};
-			final double[] halfCoefficient = new double[]{};
-			
-			// We compute the coefficients pyramid 
-			for (int depth = 1; ((depth <= pyramidDepth) && (!t.isInterrupted())); depth++) 
+		int halfWidth = width;
+		int halfHeight = height;
+		final double[] fullDual = new double[]{};
+		final double[] halfCoefficient = new double[]{};
+
+		// We compute the coefficients pyramid
+		for (int depth = 1; ((depth <= pyramidDepth) && (!t.isInterrupted())); depth++)
+		{
+			IJ.showStatus("Building coefficients pyramid...");
+			IJ.showProgress((double) depth / pyramidDepth );
+			fullWidth = halfWidth;
+			fullHeight = halfHeight;
+			halfWidth /= 2;
+			halfHeight = Math.max(halfHeight/2, 1);
+
+			// If the image is too small, we push the previous version of the coefficients
+			if(fullWidth <= getMinImageWidth() || fullHeight <= getMinImageHeight())
 			{
-				IJ.showStatus("Building coefficients pyramid...");
-				IJ.showProgress((double) depth / pyramidDepth );
-				fullWidth = halfWidth;
-				fullHeight = halfHeight;
-				halfWidth /= 2;
-				halfHeight = Math.max(halfHeight/2, 1);
-				
-				// If the image is too small, we push the previous version of the coefficients
-				if(fullWidth <= getMinImageWidth() || fullHeight <= getMinImageHeight())
-				{				 
-					if(this.bSubsampledOutput)
-						IJ.log("Coefficients pyramid " + fullWidth + "x" + fullHeight);
-					
-					cpyramid.push(fullDual);
-					cpyramid.push(new Integer(fullHeight));
-					cpyramid.push(new Integer(fullWidth));
-					halfWidth *= 2;
-					halfHeight *= 2;
-					continue;
-				}
-							
-				// Otherwise, we reduce the coefficients by 2			
 				if(this.bSubsampledOutput)
-					IJ.log("Coefficients pyramid " + halfWidth + "x" + halfHeight);
-				cpyramid.push(halfCoefficient);
-				cpyramid.push(new Integer(halfHeight));
-				cpyramid.push(new Integer(halfWidth));
-								
-				// We store the coefficients of the corresponding subsampled
-				// output if it exists.
-				if(this.bSubsampledOutput && halfWidth == this.subWidth)
-				{
-					this.subCoeffs = halfCoefficient;
-				}
-			}		
-			smallestWidth  = halfWidth;
-			smallestHeight = halfHeight;
-			currentDepth = pyramidDepth+1;
-			
-			//if(this.bSubsampledOutput && this.subCoeffs != null)
-			//	System.out.println(" subCoeffs.length = " + this.subCoeffs.length);
-		} /* end buildCoefficientPyramid */	 
+					IJ.log("Coefficients pyramid " + fullWidth + "x" + fullHeight);
+
+				cpyramid.push(fullDual);
+				cpyramid.push(new Integer(fullHeight));
+				cpyramid.push(new Integer(fullWidth));
+				halfWidth *= 2;
+				halfHeight *= 2;
+				continue;
+			}
+
+			// Otherwise, we reduce the coefficients by 2
+			if(this.bSubsampledOutput)
+				IJ.log("Coefficients pyramid " + halfWidth + "x" + halfHeight);
+			cpyramid.push(halfCoefficient);
+			cpyramid.push(new Integer(halfHeight));
+			cpyramid.push(new Integer(halfWidth));
+
+			// We store the coefficients of the corresponding subsampled
+			// output if it exists.
+			if(this.bSubsampledOutput && halfWidth == this.subWidth)
+			{
+				this.subCoeffs = halfCoefficient;
+			}
+		}
+		smallestWidth  = halfWidth;
+		smallestHeight = halfHeight;
+		currentDepth = pyramidDepth+1;
+
+		//if(this.bSubsampledOutput && this.subCoeffs != null)
+		//	System.out.println(" subCoeffs.length = " + this.subCoeffs.length);
+	} /* end buildCoefficientPyramid */
 	 
 	//------------------------------------------------------------------
 	/**
@@ -2325,7 +2371,7 @@ public class BSplineModel implements Runnable
 			 putRow(basic, y, hLine);
 		 }
 		 //if height is 1 this loop will just copy each value from the array back into the same array (not do anything)
-		 if (height > 1) {
+		 if (this.is2D()) {
 			 for (int x = 0; ((x < width) && (!t.isInterrupted())); x++) {
 				 extractColumn(basic, width, x, vLine);
 				 samplesToInterpolationCoefficient1D(vLine, degree, 0.0);
@@ -2361,7 +2407,7 @@ public class BSplineModel implements Runnable
 			 reduceDual1D(hLine, hData);
 			 putRow(demiDual, y, hData);
 		 }
-		 if (halfHeight > 1) {
+		 if (this.is2D()) {
 			 for (int x = 0; ((x < halfWidth) && (!t.isInterrupted())); x++) {
 				 extractColumn(demiDual, halfWidth, x, vLine);
 				 reduceDual1D(vLine, vData);
@@ -2700,5 +2746,12 @@ public class BSplineModel implements Runnable
 		 return this.maxImageSubsamplingFactor;		
 	 }
 
+	protected Stack<Object> getCpyramid() {
+		return cpyramid;
+	}
+
+	public Stack<Object> getImgpyramid() {
+		return imgpyramid;
+	}
 
 } /* end class BSplineModel */

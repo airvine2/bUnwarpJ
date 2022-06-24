@@ -1177,10 +1177,11 @@ public class Transformation
 	 * Second part of the Unidirectional registration method. Used for testing
 	 * It applies unidirectional
 	 * elastic registration to the selected source and target images.
+	 * This function can only be applied with splines of an odd order
 	 */
 	public void doUnidirectionalRegistration_Optimization()
 	{
-		// This function can only be applied with splines of an odd order
+
 		optimizationErrorValues = new ArrayList<>();
 
 		// residues
@@ -1191,115 +1192,128 @@ public class Transformation
 		double [] dyTargetToSource = new double[K];
 		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
 
-		// Now refine with the different scales
 		// state= 0 --> Increase deformation detail
 		// state= 1 --> Increase image detail
 		// state= 2 --> Do nothing until the finest image scale
-		int state;   // state=-1 --> Finish
+		// state=-1 --> Finish
+
+		int state;
 		if (min_scale_deformation==max_scale_deformation) state=1;
 		else                                              state=0;
 
-		int s = min_scale_deformation;
+		//start with the smallest set of coefficients (coarsest deformation)
+		int curDeformationDetail = min_scale_deformation;
 		int step = 0;
 		computeTotalWorkload();
 
 		while (state != -1)
 		{
-			int currentDepth = target.getCurrentDepth();
+			int curImageDepth = target.getCurrentDepth();
 
 			// Update the deformation coefficients only in states 0 and 1
 			if (state==0 || state==1)
 			{
+
 				// Update the deformation coefficients with the error of the landmarks
 				// The following conditional is now useless but it is there to allow
 				// easy changes like applying the landmarks only in the coarsest deformation
-				if (s>=min_scale_deformation)
+				if (curDeformationDetail>=min_scale_deformation)
 				{
-					calculateNewCoefficients(dxTargetToSource, dyTargetToSource, s, step);
+					calculateNewCoefficients(dxTargetToSource, dyTargetToSource, curDeformationDetail, step);
 				}
 
 				// Optimize deformation coefficients
 				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
 						targetWidth > 1, targetHeight > 1);
 
-
-
 			}
 
 			// Prepare for next iteration
 			step++;
-			switch (state)
-			{
-				case 0:
-					// Finer details in the deformation
-					if (s<max_scale_deformation)
-					{
-						cxTargetToSource = propagateCoeffsToNextLevel(intervals, cxTargetToSource, 1);
-						cyTargetToSource = propagateCoeffsToNextLevel(intervals, cyTargetToSource, 1);
-						s++;
-						intervals*=2;
 
-						// Prepare matrices for the regularization term
-						buildRegularizationTemporary(intervals, false);
+			if (state==0) {
 
-						if (currentDepth>min_scale_image) state=1;
-						else                              state=0;
-					} else
-					if (currentDepth>min_scale_image) state=1;
-					else                              state=2;
-					break;
-				case 1: // Finer details in the image, go on  optimizing
-				case 2: // Finer details in the image, do not optimize
-					// Compute next state
-					if (state==1) {
-						if      (s==max_scale_deformation && currentDepth==min_scale_image) state=2;
-						else if (s==max_scale_deformation)                                  state=1;
-						else                                                                state=0;
-					} else if (state==2) {
-						if (currentDepth==0) state=-1;
-						else                 state= 2;
+				// Increase detail of the deformation in this iteration
+				if (curDeformationDetail < max_scale_deformation) {
+
+					cxTargetToSource = propagateCoeffsToNextLevel(intervals, cxTargetToSource, 1);
+					cyTargetToSource = propagateCoeffsToNextLevel(intervals, cyTargetToSource, 1);
+					curDeformationDetail++;
+					intervals *= 2;
+
+					// Prepare matrices for the regularization term
+					buildRegularizationTemporary(intervals, false);
+
+					//now that we increased deformation detail, we will increase image detail (change to state 1)
+					if (curImageDepth > min_scale_image) state = 1;
+
+				} else if (curImageDepth > min_scale_image) {
+					//we cannot increase deformation detail anymore, but we can increase image detail in the next iteration
+					state = 1;
+				} else {
+					//we cannot increase deformation or image detail anymore
+					state = 2;
+				}
+
+			} else {
+
+				//increase image detail
+				// Pop another image and prepare the deformation
+				if (curImageDepth != 0) {
+					double oldTargetCurrentHeight = targetCurrentHeight;
+					double oldTargetCurrentWidth = targetCurrentWidth;
+
+					source.popFromPyramid();
+					target.popFromPyramid();
+
+					targetCurrentHeight = target.getCurrentHeight();
+					targetCurrentWidth = target.getCurrentWidth();
+					targetFactorHeight = target.getFactorHeight();
+					targetFactorWidth = target.getFactorWidth();
+
+					sourceCurrentHeight = source.getCurrentHeight();
+					sourceCurrentWidth = source.getCurrentWidth();
+					sourceFactorHeight = source.getFactorHeight();
+					sourceFactorWidth = source.getFactorWidth();
+
+					// Adapt the transformation to the new image size
+					double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
+					double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
+
+					for (int i = 0; i < intervals + 3; i++)
+						for (int j = 0; j < intervals + 3; j++) {
+							cxTargetToSource[i][j] *= targetFactorX;
+							cyTargetToSource[i][j] *= targetFactorY;
+						}
+
+					// Prepare matrices for the regularization term
+					buildRegularizationTemporary(intervals, false);
+				}
+
+				//get the next state
+				if (state==1) {
+					if (curDeformationDetail < max_scale_deformation) {
+						//we can increase deformation detail in next iteration
+						state = 0;
+					} else if (curImageDepth == min_scale_image) {
+						//we cannot increase deformation detail or image detail anymore
+						state = 2;
 					}
+				} else if ((state == 2) && (curImageDepth == 0)) {
+					//we are done if the current depth of the image pyramid is 0
+					state = -1;
+				}
 
-					// Pop another image and prepare the deformation
-					if (currentDepth!=0)
-					{
-						double oldTargetCurrentHeight = targetCurrentHeight;
-						double oldTargetCurrentWidth  = targetCurrentWidth;
-
-						source.popFromPyramid();
-						target.popFromPyramid();
-
-						targetCurrentHeight = target.getCurrentHeight();
-						targetCurrentWidth  = target.getCurrentWidth();
-						targetFactorHeight = target.getFactorHeight();
-						targetFactorWidth  = target.getFactorWidth();
-
-						sourceCurrentHeight = source.getCurrentHeight();
-						sourceCurrentWidth  = source.getCurrentWidth();
-						sourceFactorHeight = source.getFactorHeight();
-						sourceFactorWidth  = source.getFactorWidth();
-
-						// Adapt the transformation to the new image size
-						double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
-						double targetFactorX = (targetCurrentWidth -1) / Math.max(oldTargetCurrentWidth -1, 1.0);
-
-						for (int i=0; i<intervals+3; i++)
-							for (int j=0; j<intervals+3; j++)
-							{
-								cxTargetToSource[i][j] *= targetFactorX;
-								cyTargetToSource[i][j] *= targetFactorY;
-							}
-
-						// Prepare matrices for the regularization term
-						buildRegularizationTemporary(intervals, false);
-					}
-					break;
 			}
 
+
 			// In accurate_mode reduce the stopping threshold for the last iteration
-			if ((state==0 || state==1) && s==max_scale_deformation &&
-					currentDepth==min_scale_image+1 && accurate_mode==1)
+			if ((state==0 || state==1) &&
+					curDeformationDetail==max_scale_deformation &&
+					(curImageDepth==min_scale_image+1) &&
+					(accurate_mode==1)) {
 				stopThreshold /= 10;
+			}
 
 		}// end while (state != -1).
 
@@ -1346,6 +1360,34 @@ public class Transformation
 		}
 
 	} /* end doUnidirectionalRegistration */
+
+	/**
+	 * for testing - run optimizeCoeffs one time
+	 */
+	public void testOptimizeCoeffs() {
+		optimizationErrorValues = new ArrayList<>();
+
+		// residues
+		final int K;
+		if (targetPh!=null) K = targetPh.getPoints().size();
+		else                K = 0;
+		double [] dxTargetToSource = new double[K];
+		double [] dyTargetToSource = new double[K];
+		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
+
+		int s = min_scale_deformation;
+		int step = 0;
+
+		int currentDepth = target.getCurrentDepth();
+
+		// Update the deformation coefficients with the error of the landmarks
+
+		calculateNewCoefficients(dxTargetToSource, dyTargetToSource, s, step);
+
+		// Optimize deformation coefficients
+		optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
+				targetWidth > 1, targetHeight > 1);
+	}
 
 	public void calculateNewCoefficients(double [] dxTargetToSource, double [] dyTargetToSource, int s, int step) {
 		// Update the deformation coefficients with the error of the landmarks
@@ -1438,8 +1480,9 @@ public class Transformation
 		}
 		//return evaluateSimilarity(x, intervals, grad, true, false, bIsReverse);
 		//double f = evaluateSimilarity(x, intervals, grad, true, false, bIsReverse);
-		
-		double f2 = evaluateSimilarityMultiThread(x, intervals, grad, true, bIsReverse);
+
+		double[] imagesSumPixels = new double[2];
+		double f2 = evaluateSimilarityMultiThread(x, intervals, grad, true, bIsReverse, imagesSumPixels);
 		
 		//IJ.log("f = " + f + " f2 = " + f2);
 		return f2;
@@ -3508,7 +3551,8 @@ public class Transformation
 
 		// Source to Target evaluation (Similarity + Landmarks + Regularization)
 		//double f = evaluateSimilarity(x1, intervals, auxGrad1, only_image, show_error, false);
-		double f = evaluateSimilarityMultiThread(x1, intervals, auxGrad1, only_image, false);
+		double[] imagesSumPixels = new double[2];
+		double f = evaluateSimilarityMultiThread(x1, intervals, auxGrad1, only_image, false, imagesSumPixels);
 
 		double []x2 = new double [M];
 		for(int i = halfM, p = 0; i<M; i++, p++)
@@ -3519,7 +3563,7 @@ public class Transformation
 
 		// Target to Source evaluation (Similarity + Landmarks + Regularization)
 		//f += evaluateSimilarity(x2, intervals, auxGrad2, only_image, show_error, true);
-		f += evaluateSimilarityMultiThread(x2, intervals, auxGrad2, only_image, true);
+		f += evaluateSimilarityMultiThread(x2, intervals, auxGrad2, only_image, true, imagesSumPixels);
 
 		// Gradient composition.
 		for(int i = 0, p = 0; i<halfM; i++, p++)
@@ -4905,8 +4949,9 @@ public class Transformation
 				target.getCurrentHeight(), target.getCurrentWidth(), intervals);
 
 		// First computation of the energy (similarity + landmarks + regularization)
+		double[] imagesSumPixels_initial = new double[2];
 		//f = evaluateSimilarity(x, intervals, grad, false, false, false);
-		f = evaluateSimilarityMultiThread(x, intervals, grad, false, false);
+		f = evaluateSimilarityMultiThread(x, intervals, grad, false, false, imagesSumPixels_initial);
 
 		if (saveMarquardtOptim) optimizationErrorValues.add(f);
 		if (showMarquardtOptim) IJ.log("f(1)="+f);
@@ -4963,8 +5008,15 @@ public class Transformation
 
 			/* Estimate the new function value -------------------------------- */
 			//f = evaluateSimilarity(x, intervals, grad, false, false, false);
-			f = evaluateSimilarityMultiThread(x, intervals, grad, false, false);
+			double[] imagesSumPixels_current = new double[2];
+			f = evaluateSimilarityMultiThread(x, intervals, grad, false, false, imagesSumPixels_current);
 			if (saveMarquardtOptim) optimizationErrorValues.add(f);
+
+			//check for large change in pixels sum, for the case where the transformation zeros out the image
+			double sourcePixelSumDiff = imagesSumPixels_initial[0] - imagesSumPixels_current[0];
+			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > 0.7) {
+				f = 1.0/FLT_EPSILON;
+			}
 
 			iter++;
 			if (showMarquardtOptim) 
@@ -6838,7 +6890,8 @@ public class Transformation
 			final int intervals,
 			double []grad,
 			final boolean only_image,
-			boolean bIsReverse)
+			boolean bIsReverse,
+			double[] imagesSumPixels)
 	{
 
 		// Auxiliary variables for changing from source to target and inversely
@@ -6882,7 +6935,12 @@ public class Transformation
 			vgradreg[k]=vgradland[k]=grad[k]=0.0F;
 
 		// Estimate the similarity and gradient between both images
+		//imageSimilarity is actually the avg sum of sqr error between the 2 images
+		//and we want to minimize this.
 		double imageSimilarity = 0.0;
+
+		double sourceSumPixels = 0.0;
+		double targetSumPixels = 0.0;
 		
 		//final int Ydim = auxTarget.getCurrentHeight();
 		//final int Xdim = auxTarget.getCurrentWidth();
@@ -6909,8 +6967,11 @@ public class Transformation
 			// gradient
 			final double [][]grad_thread = new double[nThreads][grad.length];
 			// Result array:
-			// First result is the partial image similarity and second the number of pixels
-			final double [][]result = new double[nThreads][2];
+			// First result is the partial image similarity
+			// second is the number of pixels
+			// third is the sum of the source image
+			// fourth is the sum of the target image
+			final double [][]result = new double[nThreads][4];
 			// Number of processed pixels (taking into account the masks)
 			int n = 0;
 			
@@ -6958,6 +7019,18 @@ public class Transformation
 				for(int j = 0; j < grad.length; j++)
 					grad[j] += (grad_thread[i][j]/n);
 			}
+
+
+			for(int i = 0; i<nThreads; i++)
+			{
+				// sum of source image
+				sourceSumPixels += result[i][2];
+				// sum of target image
+				targetSumPixels += result[i][3];
+			}
+
+			imagesSumPixels[0] = sourceSumPixels;
+			imagesSumPixels[1] = targetSumPixels;
 			
 		}
 		
@@ -7189,7 +7262,9 @@ public class Transformation
 			final int twiceNk = 2 * Nk;
 			
 			double imageSimilarity = 0.0;
-			
+			double targetSumPixels = 0.0;
+			double sourceSumPixels = 0.0;
+
 			// The rectangle marks the area of the image to be treated.
 			int uv = rect.y * rect.width + rect.x;
 			final int Ydim = rect.y + rect.height;
@@ -7230,6 +7305,9 @@ public class Transformation
 							final double error = I2 - I1;
 							final double error2 = error*error;							
 							imageSimilarity += error2;
+
+							targetSumPixels = targetSumPixels + I2;
+							sourceSumPixels = sourceSumPixels + I1;
 
 							// Compute the derivative with respect to all the c coefficients
 							// Cost of the derivatives = 16*(3 mults + 2 sums)
@@ -7278,7 +7356,9 @@ public class Transformation
 			// Set result (image similarity value for the current rectangle
 			// and number of pixels that have been evaluated)
 			this.result[0] = imageSimilarity;		
-			this.result[1] = n;			
+			this.result[1] = n;
+			this.result[2] = sourceSumPixels;
+			this.result[3] = targetSumPixels;
 			
 		} // end run method
 		
