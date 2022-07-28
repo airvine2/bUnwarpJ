@@ -104,6 +104,9 @@ public class BSplineModel implements Runnable
 	/** current image height */
 	private int      currentHeight;
 
+	/** for undoing a popFromPyramid */
+	private Stack<Object> pyramidUndoStack = new Stack<Object>();
+
 	// Size and other information
 	/** working image/coefficients width (after scaling) */
 	private int     width;
@@ -211,6 +214,13 @@ public class BSplineModel implements Runnable
 	/*....................................................................
        Public methods
     ....................................................................*/
+
+	/**
+	 * Copy Constructor
+	 */
+	public BSplineModel(BSplineModel otherBSplineModel) {
+
+	}
 
 	//------------------------------------------------------------------
 	/**
@@ -1032,9 +1042,15 @@ public class BSplineModel implements Runnable
 		} 
 		else 
 		{
+			//get next set of coefficients
 			currentWidth       = ((Integer)cpyramid.pop()).intValue();
 			currentHeight      = ((Integer)cpyramid.pop()).intValue();
 			currentCoefficient = (double [])cpyramid.pop();
+
+			//update undo stack
+			pyramidUndoStack.push(currentWidth);
+			pyramidUndoStack.push(currentHeight);
+			pyramidUndoStack.push(currentCoefficient);
 		}
 
 		if (currentDepth > 0) 
@@ -1047,8 +1063,68 @@ public class BSplineModel implements Runnable
 				System.out.println("I cannot understand");
 			if (currentHeight != ((Integer)imgpyramid.pop()).intValue())
 				System.out.println("I cannot understand");
+			//get next image in pyramid
 			currentImage = (double [])imgpyramid.pop();
+
+			//update undo stack
+			pyramidUndoStack.push(currentImage);
+			pyramidUndoStack.push("popFromPyramid_Undo");
 		} else currentImage = image;
+	}
+
+	//------------------------------------------------------------------
+	/**
+	 * Undo pop an element from the coefficients and image pyramids.
+	 */
+	public void undoPopFromPyramid()
+	{
+		if ((!pyramidUndoStack.isEmpty()) && pyramidUndoStack.pop().equals("popFromPyramid_Undo")) {
+			//get the last items stored on the undo stack
+			currentImage = (double []) pyramidUndoStack.pop();
+			currentCoefficient = (double []) pyramidUndoStack.pop();
+			currentHeight = ((Integer)pyramidUndoStack.pop()).intValue();
+			currentWidth = ((Integer)pyramidUndoStack.pop()).intValue();
+
+			//push items from the undo stack back onto the pyramid stacks
+			// order: coeffs, height, width
+			cpyramid.push(currentCoefficient);
+			cpyramid.push(currentHeight);
+			cpyramid.push(currentWidth);
+			// order: img, height, width
+			imgpyramid.push(currentImage);
+			imgpyramid.push(currentHeight);
+			imgpyramid.push(currentWidth);
+
+			//set the current items to the next one on the undo stack
+			if ((!pyramidUndoStack.isEmpty()) && pyramidUndoStack.pop().equals("popFromPyramid_Undo")) {
+				currentImage = (double []) pyramidUndoStack.pop();
+				currentCoefficient = (double []) pyramidUndoStack.pop();
+				currentHeight = ((Integer)pyramidUndoStack.pop()).intValue();
+				currentWidth = ((Integer)pyramidUndoStack.pop()).intValue();
+				//keep them on the undo stack
+				pyramidUndoStack.push(currentWidth);
+				pyramidUndoStack.push(currentHeight);
+				pyramidUndoStack.push(currentCoefficient);
+				pyramidUndoStack.push(currentImage);
+				pyramidUndoStack.push("popFromPyramid_Undo");
+			}
+
+			currentDepth = (cpyramid.size()/3) + 1;
+		}
+	}
+
+	/**
+	 * Call undoPopFromPyramid until the pyramid is completely reset
+	 */
+	public void resetPyramid() {
+		while(pyramidUndoStack.size() > 0){
+			undoPopFromPyramid();
+		}
+		//reset current coeffs, image to 0
+		currentCoefficient = null;
+		currentImage = null;
+		currentWidth = 0;
+		currentHeight = 0;
 	}
 
 	//------------------------------------------------------------------

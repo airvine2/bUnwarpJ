@@ -558,8 +558,11 @@ public class bUnwarpJ_ implements PlugIn
 
         long start = System.currentTimeMillis(); // start timing
 
-        if(parameter.mode == MainDialog.MONO_MODE)
+        if(parameter.mode == MainDialog.MONO_MODE) {
+            //TEST
+//            warp.doUnidirectionalRegistration_AutoTune();
             warp.doUnidirectionalRegistration();
+        }
         else
             warp.doBidirectionalRegistration();
 
