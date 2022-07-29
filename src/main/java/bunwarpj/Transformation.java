@@ -1094,13 +1094,12 @@ public class Transformation
 
 		int minResolutionToUse = 0;
 		int maxResolutionToUse = 4;
-		boolean succeeded = false;
 		List<Double> errValues = new ArrayList<>();
 		List<double[][]> cxCoeffs = new ArrayList<>();
 		List<double[][]> cyCoeffs = new ArrayList<>();
 		List<List<Double>> optimErrs = new ArrayList<>();
 
-		while ((succeeded==false) && (minResolutionToUse < 4)) {
+		while (minResolutionToUse < 4) {
 
 			doUnidirectionalRegistration_Setup(minResolutionToUse, maxResolutionToUse);
 			doUnidirectionalRegistration_Optimization(minResolutionToUse, 4);
@@ -1130,6 +1129,48 @@ public class Transformation
 			}
 		}
 
+		minResolutionToUse = minIdx;
+
+//		this.cxTargetToSource = cxCoeffs.get(minIdx);
+//		this.cyTargetToSource = cyCoeffs.get(minIdx);
+//		this.optimizationErrorValues = optimErrs.get(minIdx);
+
+//		cxCoeffs.clear();
+//		cyCoeffs.clear();
+//		optimErrs.clear();
+//		errValues.clear();
+//
+//		while (maxResolutionToUse >= minResolutionToUse) {
+//
+//			source.resetPyramid();
+//			target.resetPyramid();
+//
+//			doUnidirectionalRegistration_Setup(minResolutionToUse, maxResolutionToUse);
+//			doUnidirectionalRegistration_Optimization(minResolutionToUse, maxResolutionToUse);
+//
+//			double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
+//			errValues.add(finalErr);
+//
+//			cxCoeffs.add(this.cxTargetToSource);
+//			cyCoeffs.add(this.cyTargetToSource);
+//			optimErrs.add(this.optimizationErrorValues);
+//
+//			if (maxResolutionToUse >= minResolutionToUse) {
+//				maxResolutionToUse--;
+//			}
+//
+//		}
+//
+//		//find out which resolution gave min error
+//		minError = Double.MAX_VALUE;
+//		minIdx = -1;
+//		for (int i=0; i<errValues.size(); i++) {
+//			if (errValues.get(i) < minError) {
+//				minError = errValues.get(i);
+//				minIdx = i;
+//			}
+//		}
+
 		this.cxTargetToSource = cxCoeffs.get(minIdx);
 		this.cyTargetToSource = cyCoeffs.get(minIdx);
 		this.optimizationErrorValues = optimErrs.get(minIdx);
@@ -1152,7 +1193,7 @@ public class Transformation
 		source.popFromPyramid();
 		target.popFromPyramid();
 
-		while (this.source.getCurrentDepth() > (endingDeformationDetail + 1)) {
+		while (this.source.getCurrentDepth() > (5 - startingDeformationDetail)) {
 			source.popFromPyramid();
 			target.popFromPyramid();
 		}
@@ -1260,11 +1301,11 @@ public class Transformation
 		// state=-1 --> Finish
 
 		int state;
-		if (min_scale_deformation==max_scale_deformation) state=1;
+		if (startingDeformationDetail==endingDeformationDetail) state=1;
 		else                                              state=0;
 
 		//start with the smallest set of coefficients, which is lowest number, and increment
-		int curDeformationDetail = min_scale_deformation;
+		int curDeformationDetail = startingDeformationDetail;
 		int step = 0;
 		computeTotalWorkload();
 

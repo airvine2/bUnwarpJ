@@ -335,10 +335,22 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-//        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune();
+//        TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+//
+//
+//
+//        testContainer2.options.min_scale_deformation = 0;
+//        testContainer2.options.max_scale_deformation = 4;
+//
+//        testContainer2.initializeTransformationInputs_Int();
+//        testContainer2.buildBSplineModels();
+//        testContainer2.initializeTransformationObject();
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(0, 3);
-        testContainer.warp.doUnidirectionalRegistration_Optimization(0, 3);
+
+        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune();
+
+//        testContainer.warp.doUnidirectionalRegistration_Setup(1, 4);
+//        testContainer.warp.doUnidirectionalRegistration_Optimization(1, 4);
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
