@@ -8,6 +8,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransformationTest {
 
@@ -316,7 +319,7 @@ class TransformationTest {
     }
 
     @Test
-    void doUnidirectionalRegistration_Optimization_1D_fails() throws Exception{
+    void doUnidirectionalRegistration_Optimization_Autotune_1D() throws Exception{
 
         //true if we are saving results, false if we are checking results against a file
         boolean saveResults = true;
@@ -329,16 +332,13 @@ class TransformationTest {
 
 
         testContainer.options.min_scale_deformation = 0;
-        testContainer.options.max_scale_deformation = 4;
+        testContainer.options.max_scale_deformation = 3;
 
         testContainer.initializeTransformationInputs_Int();
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
 //        TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
-//
-//
-//
 //        testContainer2.options.min_scale_deformation = 0;
 //        testContainer2.options.max_scale_deformation = 4;
 //
@@ -347,10 +347,10 @@ class TransformationTest {
 //        testContainer2.initializeTransformationObject();
 
 
-        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune();
+//        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune();
 
-//        testContainer.warp.doUnidirectionalRegistration_Setup(1, 4);
-//        testContainer.warp.doUnidirectionalRegistration_Optimization(1, 4);
+        testContainer.warp.doUnidirectionalRegistration_Setup(0, 3);
+        testContainer.warp.doUnidirectionalRegistration_Optimization(0, 3);
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -401,6 +401,119 @@ class TransformationTest {
         } else {
 
         }
+
+    }
+
+    @Test
+    /**
+     * Test that doUnidirectionalRegistration_Optimization gives the same results
+     * if you initialize the transformation with min_scale_deformation = 1,
+     * or if you initialize the transformation with min_scale_deformation = 0
+     * and then pass the value 1 as input parameter startingDeformationDetail to doUnidirectionalRegistration_Optimization
+     * (that you can control the starting deformation detail regardless of how the transform was initialized)
+     */
+    void doUnidirectionalRegistration_Optimization_startingDeformationDetail_1D() throws Exception{
+
+//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data scaled_1D_optimization");
+//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug");
+//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-2");
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        int startResolution = 1;
+        int endResolution = 4;
+
+        testContainer.options.min_scale_deformation = 1;
+        testContainer.options.max_scale_deformation = 4;
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+        testContainer.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
+        testContainer.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+
+
+        testContainer2.options.min_scale_deformation = 0;
+        testContainer2.options.max_scale_deformation = 4;
+        testContainer2.initializeTransformationInputs_Int();
+        testContainer2.buildBSplineModels();
+        testContainer2.initializeTransformationObject();
+        testContainer2.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
+        testContainer2.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        //apply transformation to source image
+        int[][] warpedImageMtx2 = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer2.warp,
+                testContainer.sourceMtxInt);
+
+        //compare transformation coefficients
+        assertTrue(Arrays.deepEquals(
+                testContainer.warp.getDirectDeformationCoefficientsX(),
+                testContainer2.warp.getDirectDeformationCoefficientsX()));
+
+        assertTrue(Arrays.deepEquals(
+                testContainer.warp.getDirectDeformationCoefficientsY(),
+                testContainer2.warp.getDirectDeformationCoefficientsY()));
+
+        assertTrue(Arrays.deepEquals(warpedImageMtx, warpedImageMtx2));
+
+    }
+
+    @Test
+    /**
+     * Test that doUnidirectionalRegistration_Optimization gives the same results
+     * if you initialize the transformation with max_scale_deformation = 3,
+     * or if you initialize the transformation with max_scale_deformation = 4
+     * and then pass the value 3 as input parameter startingDeformationDetail to
+     * doUnidirectionalRegistration_Optimization
+     * (that you can control the max deformation detail regardless of how the transform was initialized)
+     */
+    void doUnidirectionalRegistration_Optimization_endingDeformationDetail_1D() throws Exception{
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+        TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 3;
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        testContainer2.options.min_scale_deformation = 0;
+        testContainer2.options.max_scale_deformation = 4;
+        testContainer2.initializeTransformationInputs_Int();
+        testContainer2.buildBSplineModels();
+        testContainer2.initializeTransformationObject();
+
+
+        testContainer.warp.doUnidirectionalRegistration_Setup(0, 3);
+        testContainer2.warp.doUnidirectionalRegistration_Setup(0, 3);
+
+        testContainer.warp.doUnidirectionalRegistration_Optimization(0, 3);
+        testContainer2.warp.doUnidirectionalRegistration_Optimization(0, 3);
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        //apply transformation to source image
+        int[][] warpedImageMtx2 = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer2.warp,
+                testContainer.sourceMtxInt);
+
+        //compare transformation coefficients
+        assertTrue(Arrays.deepEquals(
+                testContainer.warp.getDirectDeformationCoefficientsX(),
+                testContainer2.warp.getDirectDeformationCoefficientsX()));
+
+        assertTrue(Arrays.deepEquals(
+                testContainer.warp.getDirectDeformationCoefficientsY(),
+                testContainer2.warp.getDirectDeformationCoefficientsY()));
+
+        assertTrue(Arrays.deepEquals(warpedImageMtx, warpedImageMtx2));
 
     }
 

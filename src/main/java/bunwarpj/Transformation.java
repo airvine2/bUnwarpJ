@@ -1092,8 +1092,13 @@ public class Transformation
 
 	public int doUnidirectionalRegistration_AutoTune() {
 
-		int minResolutionToUse = 0;
-		int maxResolutionToUse = 4;
+		//the minimum resolution and max resolutions we can test are limited by the min_scale_deformation
+		// and max_scale_deformation fields specified in the options.
+		int minResolutionToUse = this.min_scale_deformation;
+		int maxResolutionToUse = this.max_scale_deformation;
+
+		// temporarily store results for each resolution setting that we test,
+		// and at the end we will keep the best results.
 		List<Double> errValues = new ArrayList<>();
 		List<double[][]> cxCoeffs = new ArrayList<>();
 		List<double[][]> cyCoeffs = new ArrayList<>();
@@ -1187,13 +1192,15 @@ public class Transformation
 	public void doUnidirectionalRegistration_Setup(int startingDeformationDetail,
 												   int endingDeformationDetail)
 	{
-		// This function can only be applied with splines of an odd order
 
 		// Bring into consideration the image/coefficients at the smallest scale
 		source.popFromPyramid();
 		target.popFromPyramid();
 
-		while (this.source.getCurrentDepth() > (5 - startingDeformationDetail)) {
+		//The constant here is 5 because
+		// 4 is the maximum deformation detail allowed by the algorithm, see the class "Param"
+		// and the starting image pyramid depth is defined by the starting deformation detail
+		while (this.source.getCurrentDepth() > (endingDeformationDetail - startingDeformationDetail + 1)) {
 			source.popFromPyramid();
 			target.popFromPyramid();
 		}
@@ -1272,11 +1279,6 @@ public class Transformation
 		if (startingDeformationDetail < 0) {
 			startingDeformationDetail = this.min_scale_deformation;
 		}
-
-//		while (this.source.getCurrentDepth() > (endingDeformationDetail + 1)) {
-//			getNextImageInPyramid();
-//			adaptCoeffsToNewImage(cxTargetToSource, cyTargetToSource);
-//		}
 
 		optimizationErrorValues = new ArrayList<>();
 
