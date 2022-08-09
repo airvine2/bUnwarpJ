@@ -443,8 +443,8 @@ class TransformationTest {
         int startResolution = 1;
         int endResolution = 4;
 
-        testContainer.options.min_scale_deformation = 1;
-        testContainer.options.max_scale_deformation = 4;
+        testContainer.options.min_scale_deformation = startResolution;
+        testContainer.options.max_scale_deformation = endResolution;
         testContainer.initializeTransformationInputs_Int();
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
@@ -497,7 +497,7 @@ class TransformationTest {
         TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\2D-int");
 
         int startingResolution = 0;
-        int endResolution = 4;
+        int endResolution = 3;
 
         //initialize a Transformation with the resolutions we are testing
         testContainer.options.min_scale_deformation = startingResolution;
@@ -535,6 +535,338 @@ class TransformationTest {
 
         //compare warped source images
         assertTrue(Arrays.deepEquals(warpedImageMtx, warpedImageMtx2));
+
+    }
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_StartResolution,
+     * which chooses the optimal starting resolution, leaving the ending resolution fixed
+     */
+    void doUnidirectionalRegistration_AutoTune_StartResolution_1D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_StartResolution();
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_startRes");
+
+            TestHelper.saveArrayCSV(warpedImageMtx[0],
+                    testContainer.outputFolder, "warped-source_autotune_startRes.csv", false);
+
+        } else {
+
+            int expectedMinResolution = 0;
+            assertTrue(expectedMinResolution == minResolution_used);
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_startRes");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_startRes.csv").toString()
+            );
+            assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
+
+        }
+    }
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_EndResolution,
+     * which chooses the optimal ending resolution, leaving the starting resolution fixed
+     */
+    void doUnidirectionalRegistration_AutoTune_EndResolution_1D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_EndResolution();
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_endRes");
+
+            TestHelper.saveArrayCSV(warpedImageMtx[0],
+                    testContainer.outputFolder, "warped-source_autotune_endRes.csv", false);
+
+        } else {
+
+            int expectedMaxResolution = 4;
+            assertTrue(expectedMaxResolution == maxResolution_used);
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_endRes");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_endRes.csv").toString()
+            );
+            assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
+
+        }
+
+    }
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_Resolution,
+     * which chooses the optimal starting and ending resolutions
+     * error is measured by L2 pixel diff between the warped source image and the target image
+     * instead of using the bUnwarpJ error term
+     */
+    void doUnidirectionalRegistration_Autotune_Resolution_1D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Res");
+
+            TestHelper.saveArrayCSV(warpedImageMtx[0],
+                    testContainer.outputFolder, "warped-source_autotune_Res.csv", false);
+
+        } else {
+
+            int[] expectedResolutions = new int[] {0,4};
+            assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Res");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_Res.csv").toString()
+            );
+            assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
+
+        }
+
+    }
+
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_StartResolution,
+     * which chooses the optimal starting resolution, leaving the ending resolution fixed
+     */
+    void doUnidirectionalRegistration_AutoTune_StartResolution_2D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_StartResolution();
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_startRes");
+
+            TestHelper.saveMtxAsPng(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_startRes");
+
+            TestHelper.saveArrayCSV(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_startRes.csv");
+
+        } else {
+
+            int expectedMinResolution = 2;
+            assertTrue(expectedMinResolution == minResolution_used);
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_startRes");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_startRes.csv").toString()
+            );
+            assertTrue(Arrays.deepEquals(warpedImageMtx, expectedWarpedImageMtx));
+
+        }
+    }
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_EndResolution,
+     * which chooses the optimal ending resolution, leaving the starting resolution fixed
+     */
+    void doUnidirectionalRegistration_AutoTune_EndResolution_2D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_EndResolution();
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_endRes");
+
+            TestHelper.saveMtxAsPng(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_endRes");
+
+            TestHelper.saveArrayCSV(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_endRes.csv");
+
+        } else {
+
+            int expectedMaxResolution = 4;
+            assertTrue(expectedMaxResolution == maxResolution_used);
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_endRes");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_endRes.csv").toString()
+            );
+            assertTrue(Arrays.deepEquals(warpedImageMtx, expectedWarpedImageMtx));
+
+        }
+
+    }
+
+    @Test
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_Resolution,
+     * which chooses the optimal starting and ending resolutions
+     * error is measured by L2 pixel diff between the warped source image and the target image
+     * instead of using the bUnwarpJ error term
+     */
+    void doUnidirectionalRegistration_Autotune_Resolution_2D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
+
+        //TIMING TEST
+
+//        double startTime = System.currentTimeMillis();
+//        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
+//                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
+//        double endTime = System.currentTimeMillis();
+//        double executionTimeMS = endTime - startTime;
+//
+//        double startTime2 = System.currentTimeMillis();
+//        //apply transformation to source image
+//        resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
+//                testContainer.sourceMtxInt, testContainer.targetMtxInt, false);
+//        double endTime2 = System.currentTimeMillis();
+//
+//        double executionTimeMS2 = endTime2 - startTime2;
+
+        //END TIMING TEST
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Res");
+
+            TestHelper.saveMtxAsPng(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_Res");
+
+            TestHelper.saveArrayCSV(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_Res.csv");
+
+        } else {
+
+            int[] expectedResolutions = new int[] {1,4};
+            assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Res");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_Res.csv").toString()
+            );
+            assertTrue(Arrays.deepEquals(warpedImageMtx, expectedWarpedImageMtx));
+
+        }
 
     }
 
@@ -701,82 +1033,5 @@ class TransformationTest {
 
     }
 
-    @Test
-    void doUnidirectionalRegistration_Optimization_Autotune_2D() throws Exception{
-
-        //true if we are saving results, false if we are checking results against a file
-        boolean saveResults = true;
-
-        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
-
-        testContainer.options.min_scale_deformation = 0;
-        testContainer.options.max_scale_deformation = 4;
-
-        testContainer.initializeTransformationInputs_Int();
-        testContainer.buildBSplineModels();
-        testContainer.initializeTransformationObject();
-
-//        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_StartResolution();
-//        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_EndResolution();
-
-        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
-                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
-
-        //TIMING TEST
-
-//        double startTime = System.currentTimeMillis();
-//        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
-//                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
-//        double endTime = System.currentTimeMillis();
-//        double executionTimeMS = endTime - startTime;
-//
-//        double startTime2 = System.currentTimeMillis();
-//        //apply transformation to source image
-//        resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
-//                testContainer.sourceMtxInt, testContainer.targetMtxInt, false);
-//        double endTime2 = System.currentTimeMillis();
-//
-//        double executionTimeMS2 = endTime2 - startTime2;
-
-        //END TIMING TEST
-
-        //apply transformation to source image
-        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
-                testContainer.sourceMtxInt);
-
-//        //get the "raw" transformation
-//        ImagePlus ip = new ImagePlus("",new ByteProcessor(256,1));
-//
-//        double[][] transformation_x =
-//                new double[ 1 ][ 256 ];
-//        double[][] transformation_y =
-//                new double[ 1 ][ 256 ];
-//
-//        double[][] directTransfCoeffs_X = testContainer.warp.getDirectDeformationCoefficientsX();
-//        double[][] directTransfCoeffs_Y = testContainer.warp.getDirectDeformationCoefficientsY();
-//
-//        MiscTools.convertElasticTransformationToRaw( ip, testContainer.warp.getIntervals(),
-//                directTransfCoeffs_X, directTransfCoeffs_Y,
-//                transformation_x, transformation_y );
-
-        if (saveResults) {
-            TestHelper.saveArrayCSV(TestHelper.doubleListToArray(testContainer.warp.getOptimizationErrorValues()),
-                    testContainer.outputFolder, "optimization-errors.csv", false);
-
-            TestHelper.saveTransformationCoeffs(testContainer.warp, testContainer.outputFolder,
-                    "transformationCoeffs");
-
-            TestHelper.saveMtxAsPng(warpedImageMtx, testContainer.outputFolder, "warped-source_autotune_pixDiff");
-
-//            TestHelper.saveArrayCSV(transformation_x[0],
-//                    testContainer.outputFolder, "raw-transformation-X.csv", false);
-//            TestHelper.saveArrayCSV(transformation_y[0],
-//                    testContainer.outputFolder, "raw-transformation-Y.csv", false);
-
-        } else {
-
-        }
-
-    }
 
 }

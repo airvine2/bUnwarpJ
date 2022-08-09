@@ -17,6 +17,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TestHelper {
 
     public static HashMap<String, int[][]> importAll_CsvToMtxInt(String dataFolder) throws IOException {
@@ -182,10 +184,24 @@ public class TestHelper {
     }
 
     public static void saveTransformationCoeffs(Transformation tResult, String outputFolder, String outputFileName) {
-        int intervals = tResult.getIntervals();
         double[][] cx = tResult.getDirectDeformationCoefficientsX();
         double[][] cy = tResult.getDirectDeformationCoefficientsY();
-        MiscTools.saveElasticTransformation(intervals, cx, cy, Paths.get(outputFolder, outputFileName + ".txt").toString());
+        TestHelper.saveArrayCSV(cx, outputFolder, outputFileName + "_X.csv");
+        TestHelper.saveArrayCSV(cy, outputFolder, outputFileName + "_Y.csv");
+    }
+
+    public static void compareTransformationCoeffsToFile(Transformation tResult, String outputFolder,
+                                                         String outputFileName) throws Exception {
+        double[][] cx = tResult.getDirectDeformationCoefficientsX();
+        double[][] cy = tResult.getDirectDeformationCoefficientsY();
+
+        double[][] expectedcx = TestHelper.import_CsvToMtxDouble(
+                Paths.get(outputFolder, outputFileName + "_X.csv").toString());
+        assertTrue(Arrays.deepEquals(expectedcx, cx));
+
+        double[][] expectedcy = TestHelper.import_CsvToMtxDouble(
+                Paths.get(outputFolder, outputFileName + "_Y.csv").toString());
+        assertTrue(Arrays.deepEquals(expectedcy, cy));
     }
 
     public static ImagePlus createBWImagePlusFromMtx(int[][] aGrayLevelsMtx) {
@@ -235,6 +251,29 @@ public class TestHelper {
 
         }
 
+    }
+
+    public static void saveArrayCSV(int[][] aData, String aFolder, String aFileName) {
+        try {
+            String filePath = Paths.get(aFolder, aFileName).toString();
+            FileWriter csvWriter = new FileWriter(filePath);
+
+            for (int i=0; i < aData.length; i++) {
+                for (int j=0; j < aData[i].length; j++) {
+                    if (j>0) {
+                        csvWriter.append(",");
+                    }
+                    csvWriter.append(String.valueOf(aData[i][j]));
+
+                }
+                csvWriter.append("\n");
+            }
+
+            csvWriter.flush();
+            csvWriter.close();
+        } catch (Exception e) {
+
+        }
     }
 
     public static void saveArrayCSV(double[] aData, String aFolder, String aFileName, boolean saveAsColumn) {

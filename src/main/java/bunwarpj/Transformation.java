@@ -1146,48 +1146,6 @@ public class Transformation
 			}
 		}
 
-		minResolutionToUse = minIdx;
-
-//		this.cxTargetToSource = cxCoeffs.get(minIdx);
-//		this.cyTargetToSource = cyCoeffs.get(minIdx);
-//		this.optimizationErrorValues = optimErrs.get(minIdx);
-
-//		cxCoeffs.clear();
-//		cyCoeffs.clear();
-//		optimErrs.clear();
-//		errValues.clear();
-//
-//		while (maxResolutionToUse >= minResolutionToUse) {
-//
-//			source.resetPyramid();
-//			target.resetPyramid();
-//
-//			doUnidirectionalRegistration_Setup(minResolutionToUse, maxResolutionToUse);
-//			doUnidirectionalRegistration_Optimization(minResolutionToUse, maxResolutionToUse);
-//
-//			double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
-//			errValues.add(finalErr);
-//
-//			cxCoeffs.add(this.cxTargetToSource);
-//			cyCoeffs.add(this.cyTargetToSource);
-//			optimErrs.add(this.optimizationErrorValues);
-//
-//			if (maxResolutionToUse >= minResolutionToUse) {
-//				maxResolutionToUse--;
-//			}
-//
-//		}
-//
-//		//find out which resolution gave min error
-//		minError = Double.MAX_VALUE;
-//		minIdx = -1;
-//		for (int i=0; i<errValues.size(); i++) {
-//			if (errValues.get(i) < minError) {
-//				minError = errValues.get(i);
-//				minIdx = i;
-//			}
-//		}
-
 		this.cxTargetToSource = cxCoeffs.get(minIdx);
 		this.cyTargetToSource = cyCoeffs.get(minIdx);
 		this.optimizationErrorValues = optimErrs.get(minIdx);
@@ -1331,7 +1289,6 @@ public class Transformation
 		}
 		return (Math.sqrt(sum));
 	}
-
 
 	//------------------------------------------------------------------
 	/**
