@@ -34,10 +34,10 @@ class bUnwarpJ_Test {
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(tResult, testContainer.sourceMtxInt);
 
         //initial saving the results
-//        TestHelper.saveMtxAsPng(testContainer.sourceMtx, "source-image", testContainer.outputFolder);
-//        TestHelper.saveMtxAsPng(testContainer.targetMtx, "target-image", testContainer.outputFolder);
+//        TestHelper.saveMtxAsPng(testContainer.sourceMtx, testContainer.outputFolder, "source-image");
+//        TestHelper.saveMtxAsPng(testContainer.targetMtx, testContainer.outputFolder, "target-image");
         TestHelper.saveTransformationCoeffs(tResult, testContainer.outputFolder, "transformationCoeffs_coarse");
-        TestHelper.saveMtxAsPng(warpedImageMtx, "warped-source", testContainer.outputFolder);
+        TestHelper.saveMtxAsPng(warpedImageMtx, testContainer.outputFolder, "warped-source");
 
 //        //comparing results against the saved results
 //        int[][] sourceFromPng = TestHelper.import_PngToMtxInt(Paths.get(dataFolder,"results", "source-image.png").toString());

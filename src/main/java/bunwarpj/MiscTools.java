@@ -3474,13 +3474,13 @@ public class MiscTools
 	public static int[][] applyTransformationToGreyscaleImageMtx(Transformation aTransform, int[][] imageMtx) {
 
 		BSplineModel source = new BSplineModel(imageMtx, false);
-		source.setPyramidDepth(0);
-		source.startPyramids();
-		try {
-			source.getThread().join();
-		} catch (InterruptedException var8) {
-			IJ.error("Unexpected interruption exception " + var8);
-		}
+//		source.setPyramidDepth(0);
+//		source.startPyramids();
+//		try {
+//			source.getThread().join();
+//		} catch (InterruptedException var8) {
+//			IJ.error("Unexpected interruption exception " + var8);
+//		}
 
 		final int targetHeight = imageMtx.length;
 		final int targetWidth  = imageMtx[0].length;

@@ -148,10 +148,10 @@ public class TestHelper {
 
     }
 
-    public static void saveMtxAsPng(int[][] inputMtx, String fileName, String folder) {
+    public static void saveMtxAsPng(int[][] inputMtx, String folder, String fileName) {
         ImagePlus mtxAsImp = MiscTools.createImagePlusByte(inputMtx, fileName);
         FileSaver fs = new FileSaver(mtxAsImp);
-        String tmpImgFile = folder + "/" + fileName + ".png";
+        String tmpImgFile = Paths.get(folder,fileName + ".png").toString();
         fs.saveAsPng(tmpImgFile);
     }
 
@@ -213,9 +213,10 @@ public class TestHelper {
         return outputFolder;
     }
 
-    public static void saveArrayCSV(double[][] aData, String aFileName) {
+    public static void saveArrayCSV(double[][] aData, String aFolder, String aFileName) {
         try {
-            FileWriter csvWriter = new FileWriter(aFileName);
+            String filePath = Paths.get(aFolder, aFileName).toString();
+            FileWriter csvWriter = new FileWriter(filePath);
 
             for (int i=0; i < aData.length; i++) {
                 for (int j=0; j < aData[i].length; j++) {
@@ -236,9 +237,10 @@ public class TestHelper {
 
     }
 
-    public static void saveArrayCSV(double[] aData, String aFilePath, boolean saveAsColumn) {
+    public static void saveArrayCSV(double[] aData, String aFolder, String aFileName, boolean saveAsColumn) {
         try {
-            FileWriter csvWriter = new FileWriter(aFilePath);
+            String filePath = Paths.get(aFolder, aFileName).toString();
+            FileWriter csvWriter = new FileWriter(filePath);
 
             String delimiter;
             if (saveAsColumn) {
@@ -259,9 +261,10 @@ public class TestHelper {
         }
     }
 
-    public static void saveArrayCSV(int[] aData, String aFilePath, boolean saveAsColumn) {
+    public static void saveArrayCSV(int[] aData, String aFolder, String aFileName, boolean saveAsColumn) {
         try {
-            FileWriter csvWriter = new FileWriter(aFilePath);
+            String filePath = Paths.get(aFolder, aFileName).toString();
+            FileWriter csvWriter = new FileWriter(filePath);
 
             String delimiter;
             if (saveAsColumn) {
