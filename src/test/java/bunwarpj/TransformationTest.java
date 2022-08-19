@@ -15,10 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransformationTest {
 
-    void setUpRegistration() {
-
-    }
-
     @Test
     void doUnidirectionalRegistration_fine() throws Exception{
 
@@ -75,10 +71,7 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(
-                testContainer.options.min_scale_deformation,testContainer.options.max_scale_deformation);
-
-        testContainer.warp.doUnidirectionalRegistration_Optimization(-1,-1);
+        testContainer.warp.doUnidirectionalRegistration(0,4);
 
         TestHelper.saveArrayCSV(TestHelper.doubleListToArray(testContainer.warp.getOptimizationErrorValues()),
                 testContainer.outputFolder,"optimization-errors.csv", true);
@@ -108,10 +101,8 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(
+        testContainer.warp.doUnidirectionalRegistration(
                 testContainer.options.min_scale_deformation,testContainer.options.max_scale_deformation);
-
-        testContainer.warp.doUnidirectionalRegistration_Optimization(-1,-1);
 
         //apply transformation to source image
         double[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -174,8 +165,33 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(
-                testContainer.options.min_scale_deformation,testContainer.options.max_scale_deformation);
+        BSplineModel source = (BSplineModel)(TestHelper.getPrivateField(testContainer.warp, "source"));
+        BSplineModel target = (BSplineModel)(TestHelper.getPrivateField(testContainer.warp, "target"));
+
+        source.popFromPyramid();
+        target.popFromPyramid();
+
+        TestHelper.setPrivateField(testContainer.warp, "targetCurrentHeight", target.getCurrentHeight());
+        TestHelper.setPrivateField(testContainer.warp, "targetCurrentWidth", target.getCurrentWidth());
+        TestHelper.setPrivateField(testContainer.warp, "targetFactorHeight", target.getFactorHeight());
+        TestHelper.setPrivateField(testContainer.warp, "targetFactorWidth", target.getFactorWidth());
+        TestHelper.setPrivateField(testContainer.warp, "sourceCurrentHeight", source.getCurrentHeight());
+        TestHelper.setPrivateField(testContainer.warp, "sourceCurrentWidth", source.getCurrentWidth());
+        TestHelper.setPrivateField(testContainer.warp, "sourceFactorHeight", source.getFactorHeight());
+        TestHelper.setPrivateField(testContainer.warp, "sourceFactorWidth", source.getFactorWidth());
+
+        int intervals = (int)Math.pow(2, testContainer.options.min_scale_deformation);
+        TestHelper.setPrivateField(testContainer.warp, "intervals", intervals);
+
+        TestHelper.setPrivateField(testContainer.warp, "cxTargetToSource", new double[intervals+3][intervals+3]);
+        TestHelper.setPrivateField(testContainer.warp, "cyTargetToSource", new double[intervals+3][intervals+3]);
+
+        TestHelper.callPrivateMethod(testContainer.warp, "buildRegularizationTemporary",
+                new Class[] {int.class, boolean.class},
+                intervals, false);
+
+        TestHelper.callPrivateMethod(testContainer.warp, "setupAffineMtx_TargetToSource",
+                new Class[] {});
 
 //        optimizationErrorValues = new ArrayList<>();
         TestHelper.setPrivateField(testContainer.warp, "optimizationErrorValues", new ArrayList<>());
@@ -215,7 +231,7 @@ class TransformationTest {
         //the code below is equivalent to the private function call from within the Transformation class
         //optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource, targetWidth > 1, targetHeight > 1);
 
-        int intervals = (int)TestHelper.getPrivateField(testContainer.warp,"intervals");
+        intervals = (int)TestHelper.getPrivateField(testContainer.warp,"intervals");
         double stopThreshold = (double)TestHelper.getPrivateField(testContainer.warp,"stopThreshold");
         TestHelper.callPrivateMethod(testContainer.warp, "optimizeCoeffs",
                 new Class[] {int.class, double.class, cxTargetToSource.getClass(), cyTargetToSource.getClass(),
@@ -250,8 +266,33 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(testContainer.options.min_scale_deformation,
-                testContainer.options.max_scale_deformation);
+        BSplineModel source = (BSplineModel)(TestHelper.getPrivateField(testContainer.warp, "source"));
+        BSplineModel target = (BSplineModel)(TestHelper.getPrivateField(testContainer.warp, "target"));
+
+        source.popFromPyramid();
+        target.popFromPyramid();
+
+        TestHelper.setPrivateField(testContainer.warp, "targetCurrentHeight", target.getCurrentHeight());
+        TestHelper.setPrivateField(testContainer.warp, "targetCurrentWidth", target.getCurrentWidth());
+        TestHelper.setPrivateField(testContainer.warp, "targetFactorHeight", target.getFactorHeight());
+        TestHelper.setPrivateField(testContainer.warp, "targetFactorWidth", target.getFactorWidth());
+        TestHelper.setPrivateField(testContainer.warp, "sourceCurrentHeight", source.getCurrentHeight());
+        TestHelper.setPrivateField(testContainer.warp, "sourceCurrentWidth", source.getCurrentWidth());
+        TestHelper.setPrivateField(testContainer.warp, "sourceFactorHeight", source.getFactorHeight());
+        TestHelper.setPrivateField(testContainer.warp, "sourceFactorWidth", source.getFactorWidth());
+
+        int intervals = (int)Math.pow(2, testContainer.options.min_scale_deformation);
+        TestHelper.setPrivateField(testContainer.warp, "intervals", intervals);
+
+        TestHelper.setPrivateField(testContainer.warp, "cxTargetToSource", new double[intervals+3][intervals+3]);
+        TestHelper.setPrivateField(testContainer.warp, "cyTargetToSource", new double[intervals+3][intervals+3]);
+
+        TestHelper.callPrivateMethod(testContainer.warp, "buildRegularizationTemporary",
+                new Class[] {int.class, boolean.class},
+                intervals, false);
+
+        TestHelper.callPrivateMethod(testContainer.warp, "setupAffineMtx_TargetToSource",
+                new Class[] {});
 
 //        optimizationErrorValues = new ArrayList<>();
         TestHelper.setPrivateField(testContainer.warp, "optimizationErrorValues", new ArrayList<>());
@@ -264,7 +305,6 @@ class TransformationTest {
                 new Class[] {dxTargetToSource.getClass(), dyTargetToSource.getClass(), boolean.class},
                 dxTargetToSource,dyTargetToSource, false);
 
-//        int s = min_scale_deformation;
         int s = (int)TestHelper.getPrivateField(testContainer.warp, "min_scale_deformation");
         int step = 0;
 
@@ -288,7 +328,7 @@ class TransformationTest {
         // Optimize deformation coefficients
 //        optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource, targetWidth > 1, targetHeight > 1);
 
-        int intervals = (int)TestHelper.getPrivateField(testContainer.warp,"intervals");
+        intervals = (int)TestHelper.getPrivateField(testContainer.warp,"intervals");
         double stopThreshold = (double)TestHelper.getPrivateField(testContainer.warp,"stopThreshold");
         TestHelper.callPrivateMethod(testContainer.warp, "optimizeCoeffs",
                 new Class[] {int.class, double.class, cxTargetToSource.getClass(), cyTargetToSource.getClass(),
@@ -338,8 +378,7 @@ class TransformationTest {
         testContainer.initializeTransformationInputs_Int();
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
-        testContainer.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
-        testContainer.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+        testContainer.warp.doUnidirectionalRegistration(startResolution, endResolution);
 
 
         testContainer2.options.min_scale_deformation = 0;
@@ -347,8 +386,7 @@ class TransformationTest {
         testContainer2.initializeTransformationInputs_Int();
         testContainer2.buildBSplineModels();
         testContainer2.initializeTransformationObject();
-        testContainer2.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
-        testContainer2.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+        testContainer2.warp.doUnidirectionalRegistration(startResolution, endResolution);
 
 
         //apply transformation to source image
@@ -398,12 +436,8 @@ class TransformationTest {
         testContainer2.buildBSplineModels();
         testContainer2.initializeTransformationObject();
 
-
-        testContainer.warp.doUnidirectionalRegistration_Setup(0, 3);
-        testContainer2.warp.doUnidirectionalRegistration_Setup(0, 3);
-
-        testContainer.warp.doUnidirectionalRegistration_Optimization(0, 3);
-        testContainer2.warp.doUnidirectionalRegistration_Optimization(0, 3);
+        testContainer.warp.doUnidirectionalRegistration(0, 3);
+        testContainer2.warp.doUnidirectionalRegistration(0, 3);
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -448,8 +482,7 @@ class TransformationTest {
         testContainer.initializeTransformationInputs_Int();
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
-        testContainer.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
-        testContainer.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+        testContainer.warp.doUnidirectionalRegistration(startResolution, endResolution);
 
 
         testContainer2.options.min_scale_deformation = 0;
@@ -457,8 +490,7 @@ class TransformationTest {
         testContainer2.initializeTransformationInputs_Int();
         testContainer2.buildBSplineModels();
         testContainer2.initializeTransformationObject();
-        testContainer2.warp.doUnidirectionalRegistration_Setup(startResolution, endResolution);
-        testContainer2.warp.doUnidirectionalRegistration_Optimization(startResolution, endResolution);
+        testContainer2.warp.doUnidirectionalRegistration(startResolution, endResolution);
 
 
         //apply transformation to source image
@@ -557,7 +589,7 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_StartResolution();
+        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution("start")[0];
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -606,7 +638,7 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_EndResolution();
+        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution("end")[1];
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -659,7 +691,7 @@ class TransformationTest {
         testContainer.initializeTransformationObject();
 
         int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
-                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, "both", true);
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -690,7 +722,6 @@ class TransformationTest {
 
     }
 
-
     @Test
     /**
      * (2D data input) Test doUnidirectionalRegistration_AutoTune_StartResolution,
@@ -710,7 +741,7 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_StartResolution();
+        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution("start")[0];
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -762,7 +793,7 @@ class TransformationTest {
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_EndResolution();
+        int maxResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution("end")[1];
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
@@ -818,7 +849,7 @@ class TransformationTest {
         testContainer.initializeTransformationObject();
 
         int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
-                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, "both", true);
 
         //TIMING TEST
 
@@ -904,11 +935,6 @@ class TransformationTest {
 
         assertTrue(Arrays.equals(source1.getCoefficients(), source2.getCoefficients()));
 
-        testContainer.warp.doUnidirectionalRegistration_Setup(startingResolution, endResolution);
-        testContainer2.warp.doUnidirectionalRegistration_Setup(startingResolution, endResolution);
-
-        //check if the transformations are equivalent after registration setup
-
         assertTrue(Arrays.deepEquals(
                 testContainer.warp.getDirectDeformationCoefficientsX(),
                 testContainer2.warp.getDirectDeformationCoefficientsX()));
@@ -917,12 +943,8 @@ class TransformationTest {
                 testContainer.warp.getDirectDeformationCoefficientsY(),
                 testContainer2.warp.getDirectDeformationCoefficientsY()));
 
-        double[][] p11_1 = (double[][])TestHelper.getPrivateField(testContainer.warp, "P11_TargetToSource");
-        double[][] p11_2= (double[][])TestHelper.getPrivateField(testContainer.warp, "P11_TargetToSource");
-        assertTrue(Arrays.deepEquals(p11_1, p11_2));
-
-        testContainer.warp.doUnidirectionalRegistration_Optimization(startingResolution, endResolution);
-        testContainer2.warp.doUnidirectionalRegistration_Optimization(startingResolution, endResolution);
+        testContainer.warp.doUnidirectionalRegistration(startingResolution, endResolution);
+        testContainer2.warp.doUnidirectionalRegistration(startingResolution, endResolution);
 
         assertTrue(Arrays.deepEquals(
                 testContainer.warp.getDirectDeformationCoefficientsX(),
@@ -951,87 +973,59 @@ class TransformationTest {
     }
 
     @Test
-    void doUnidirectionalRegistration_Optimization_Autotune_1D() throws Exception{
+    /**
+     * (2D data input) Test doUnidirectionalRegistration_AutoTune_Weights,
+     * which chooses the optimal divergence and curl weights
+     */
+    void doUnidirectionalRegistration_Autotune_Weights_2D() throws Exception{
 
         //true if we are saving results, false if we are checking results against a file
-        boolean saveResults = true;
+        boolean initResults = true;
 
-//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data scaled_1D_optimization");
-//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug");
-//        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-2");
-        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
-
-
+        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
 
         testContainer.options.min_scale_deformation = 0;
-        testContainer.options.max_scale_deformation = 3;
+        testContainer.options.max_scale_deformation = 4;
 
         testContainer.initializeTransformationInputs_Int();
         testContainer.buildBSplineModels();
         testContainer.initializeTransformationObject();
 
-//        TestContainer testContainer2 = new TestContainer("C:\\images-as-csv\\test data_1D_debug-3");
-//        testContainer2.options.min_scale_deformation = 0;
-//        testContainer2.options.max_scale_deformation = 4;
-//
-//        testContainer2.initializeTransformationInputs_Int();
-//        testContainer2.buildBSplineModels();
-//        testContainer2.initializeTransformationObject();
-
-
-//        int minResolution_used = testContainer.warp.doUnidirectionalRegistration_AutoTune();
-
-        testContainer.warp.doUnidirectionalRegistration_Setup(0, 3);
-        testContainer.warp.doUnidirectionalRegistration_Optimization(0, 3);
+        double bestDivWeight = testContainer.warp.doUnidirectionalRegistration_AutoTune_Weights(
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, true);
 
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
                 testContainer.sourceMtxInt);
 
-        //get the "raw" transformation
-        ImagePlus ip = new ImagePlus("",new ByteProcessor(256,1));
+        if (initResults) {
 
-        double[][] transformation_x =
-                new double[ 1 ][ 256 ];
-        double[][] transformation_y =
-                new double[ 1 ][ 256 ];
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Weight");
 
-        double[][] directTransfCoeffs_X = testContainer.warp.getDirectDeformationCoefficientsX();
-        double[][] directTransfCoeffs_Y = testContainer.warp.getDirectDeformationCoefficientsY();
+            TestHelper.saveMtxAsPng(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_Weight");
 
-        MiscTools.convertElasticTransformationToRaw( ip, testContainer.warp.getIntervals(),
-                directTransfCoeffs_X, directTransfCoeffs_Y,
-                transformation_x, transformation_y );
-
-        //apply transformation to points
-        double[] transformedPoint1 = MiscTools.approximateInverseCoords(new double[]{109d, 0}, ip,
-                transformation_x,
-                transformation_y);
-
-        double[] transformedPoint2 = MiscTools.approximateInverseCoords(new double[]{130d, 0}, ip,
-                transformation_x,
-                transformation_y);
-
-        if (saveResults) {
-            TestHelper.saveArrayCSV(TestHelper.doubleListToArray(testContainer.warp.getOptimizationErrorValues()),
-                    testContainer.outputFolder, "optimization-errors.csv", false);
-
-            TestHelper.saveTransformationCoeffs(testContainer.warp, testContainer.outputFolder,
-                    "transformationCoeffs");
-
-            TestHelper.saveArrayCSV(warpedImageMtx[0],
-                    testContainer.outputFolder, "warped-source.csv", false);
-
-            TestHelper.saveArrayCSV(transformation_x[0],
-                    testContainer.outputFolder, "raw-transformation-X.csv", false);
-            TestHelper.saveArrayCSV(transformation_y[0],
-                    testContainer.outputFolder, "raw-transformation-Y.csv", false);
+            TestHelper.saveArrayCSV(warpedImageMtx,
+                    testContainer.outputFolder, "warped-source_autotune_Weight.csv");
 
         } else {
+
+//            int[] expectedResolutions = new int[] {1,4};
+//            assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, "transformationCoeffs_autotune_Weight");
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, "warped-source_autotune_Res.Weight").toString()
+            );
+            assertTrue(Arrays.deepEquals(warpedImageMtx, expectedWarpedImageMtx));
 
         }
 
     }
+
 
 
 }

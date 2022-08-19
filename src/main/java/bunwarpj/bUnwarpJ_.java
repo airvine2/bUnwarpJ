@@ -559,9 +559,124 @@ public class bUnwarpJ_ implements PlugIn
         long start = System.currentTimeMillis(); // start timing
 
         if(parameter.mode == MainDialog.MONO_MODE) {
-            //TEST
-//            warp.doUnidirectionalRegistration_AutoTune();
             warp.doUnidirectionalRegistration();
+        }
+        else
+            warp.doBidirectionalRegistration();
+
+        long stop = System.currentTimeMillis(); // stop timing
+        IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time
+
+        return warp;
+    }
+
+
+    //------------------------------------------------------------------
+    /**
+     * Method for images alignment with no graphical interface. This
+     * method gives as result a Transformation object that
+     * contains all the registration information.
+     * Subsampling is not available, but all it really does is rescale the image first using IJ
+     *
+     * @param targetImageMtx input target image as a matrix of values between 0-255
+     * @param sourceImageMtx input source image as a matrix of values between 0-255
+     * @param parameter registration parameters
+     * @param autotuneType "both", "start" or "end"
+     *
+     * @return results transformation object
+     */
+    public static Transformation computeTransformationBatch_Autotune(int[][] targetImageMtx, int[][] sourceImageMtx,
+                                                            Param parameter, String autotuneType)
+    {
+        if(targetImageMtx == null || sourceImageMtx == null || parameter == null)
+        {
+            IJ.log("Missing parameters to compute transformation!");
+            return null;
+        }
+
+        // Create source image model
+        final BSplineModel source = new BSplineModel(sourceImageMtx, true);
+        ImagePlus sourceImp = MiscTools.createImagePlusByte(sourceImageMtx, "source image");
+        final Mask sourceMsk = new Mask(sourceImageMtx[0].length, sourceImageMtx.length);
+        PointHandler sourcePh  = new PointHandler(sourceImp);
+
+        // Create target image model
+        final BSplineModel target = new BSplineModel(targetImageMtx, true);
+        ImagePlus targetImp = MiscTools.createImagePlusByte(targetImageMtx, "target image");
+        final Mask targetMsk = new Mask(targetImageMtx[0].length, targetImageMtx.length);
+        PointHandler targetPh  = new PointHandler(targetImp);
+
+        final Transformation warp =  computeTransformation_Autotune(target, source, parameter, targetImp, sourceImp, targetMsk,
+                sourceMsk, targetPh, sourcePh, null, null, targetImageMtx, sourceImageMtx,
+                autotuneType);
+
+        return warp;
+    } // end computeTransformationBatch
+
+    public static Transformation computeTransformation_Autotune(BSplineModel target, BSplineModel source, Param parameter,
+                                                       ImagePlus targetImp, ImagePlus sourceImp,
+                                                       Mask targetMsk, Mask sourceMsk,
+                                                       PointHandler targetPh, PointHandler sourcePh,
+                                                       double[][] targetAffineMatrix, double[][] sourceAffineMatrix,
+                                                        int[][] targetImageMtx, int[][] sourceImageMtx,
+                                                                String autotuneType) {
+        // Produce side information
+        parameter.min_scale_deformation = 0;
+        parameter.max_scale_deformation = 4;
+        final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
+        final int min_scale_image = 0;
+
+        //calculate the BSpline model coefficients for source and target
+        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.startPyramids();
+
+        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.startPyramids();
+
+        // Join threads
+        try
+        {
+            source.getThread().join();
+            target.getThread().join();
+        }
+        catch (InterruptedException e)
+        {
+            IJ.log("Unexpected interruption exception " + e);
+        }
+
+        // Output images
+        ImagePlus[] output_ip = new ImagePlus[2];
+
+        // output level to -1 so nothing is displayed
+        final int outputLevel = -1;
+
+        final boolean showMarquardtOptim = false;
+
+        final Transformation warp = new Transformation(
+                sourceImp, targetImp, source, target, sourcePh, targetPh,
+                sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
+                parameter.min_scale_deformation, parameter.max_scale_deformation,
+                min_scale_image, parameter.divWeight,
+                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
+                parameter.consistencyWeight, parameter.stopThreshold,
+                outputLevel, showMarquardtOptim, parameter.mode,null, null,
+                output_ip[0], output_ip[1], null,
+                sourceImp.getProcessor(), targetImp.getProcessor());
+
+        // Initial affine transform correction values
+        if ((sourceAffineMatrix == null) && (targetAffineMatrix == null)) {
+            warp.setAnisotropyCorrection(parameter.getAnisotropyCorrection());
+            warp.setScaleCorrection(parameter.getScaleCorrection());
+            warp.setShearCorrection(parameter.getShearCorrection());
+        }
+
+        IJ.log("\nRegistering...\n");
+
+        long start = System.currentTimeMillis(); // start timing
+
+        if(parameter.mode == MainDialog.MONO_MODE) {
+            warp.doUnidirectionalRegistration_AutoTune_Resolution(sourceImageMtx, targetImageMtx, autotuneType,
+                    true);
         }
         else
             warp.doBidirectionalRegistration();
