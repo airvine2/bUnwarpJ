@@ -58,9 +58,13 @@ public class Param {
 	public int min_scale_deformation = 0;
 	/** maximum scale deformation (0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine, 4 - Super Fine) */
 	public int max_scale_deformation = 2;
-	/** divergence weight */
+	/** divergence weight
+	 * A value between 0 and 1, where a higher value restricts straight movement more
+	 * */
 	public double  divWeight = 0;
-	/** curl weight */
+	/** curl weight
+	 * A value between 0 and 1, where a higher value restricts curved movement more
+	 * */
 	public double  curlWeight= 0;
 	/** landmark weight */
 	public double  landmarkWeight = 0;
@@ -89,7 +93,16 @@ public class Param {
 	 * Empty constructor
 	 */
 	public Param(){}
-	
+
+	/**
+	 * Copy Constructor
+	 */
+	public Param(Param otherParam) {
+		this(otherParam.mode, otherParam.img_subsamp_fact, otherParam.min_scale_deformation, otherParam.max_scale_deformation,
+				otherParam.divWeight, otherParam.curlWeight, otherParam.landmarkWeight, otherParam.imageWeight,
+				otherParam.consistencyWeight, otherParam.stopThreshold);
+	}
+
 	/**
 	 * Full constructor
 	 * 

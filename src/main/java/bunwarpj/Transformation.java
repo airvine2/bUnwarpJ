@@ -59,10 +59,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 
 /**
@@ -154,6 +151,10 @@ public class Transformation
 	private int     targetCurrentHeight;
 	/** target image current width */
 	private int     targetCurrentWidth;
+	/** target image current height */
+	private int oldTargetCurrentHeight;
+	/** target image current width */
+	private int oldTargetCurrentWidth;
 	/** source image current height */
 	private int     sourceCurrentHeight;
 	/** source image current width */
@@ -216,8 +217,6 @@ public class Transformation
 	private int     outputLevel;
 	/** flag to show the optimizer */
 	private boolean showMarquardtOptim;
-	/** flag to save error function value at each iteration of optimization */
-	public boolean saveMarquardtOptim;
 	/** divergence weight */
 	private double  divWeight;
 	/** curl weight */
@@ -824,283 +823,46 @@ public class Transformation
 		
 	} // end doBidirectionalRegistration
 
-	//------------------------------------------------------------------
 	/**
-	 * Unidirectional registration method. It applies unidirectional
-	 * elastic registration to the selected source and target images.
+	 * Apply unidirectional elastic registration to the selected source and target images.
+	 * This function can only be applied with splines of an odd order
+	 * @return a hashmap of the final error values: similarity, regularization, landmark, consistency
 	 */
-	public void doUnidirectionalRegistration ()
-	{		
-		// This function can only be applied with splines of an odd order
-
-		optimizationErrorValues = new ArrayList<>();
-
-		// Bring into consideration the image/coefficients at the smallest scale
-		source.popFromPyramid();
-		target.popFromPyramid();
-
-		targetCurrentHeight = target.getCurrentHeight();
-		targetCurrentWidth  = target.getCurrentWidth();
-
-		targetFactorHeight  = target.getFactorHeight();
-		targetFactorWidth   = target.getFactorWidth();
-
-		sourceCurrentHeight = source.getCurrentHeight();
-		sourceCurrentWidth  = source.getCurrentWidth();
-
-		sourceFactorHeight  = source.getFactorHeight();
-		sourceFactorWidth   = source.getFactorWidth();						
-
-		// size correction factor
-		int sizeCorrectionFactor = 0; //this.targetHeight / (1024  * (int) Math.pow(2, this.maxImageSubsamplingFactor));
-		//System.out.println("Size correction factor = " + sizeCorrectionFactor);
-		
-		// Ask memory for the transformation coefficients
-		intervals = (int)Math.pow(2, min_scale_deformation + sizeCorrectionFactor);
-		
-		cxTargetToSource = new double[intervals+3][intervals+3];
-		cyTargetToSource = new double[intervals+3][intervals+3];
-
-		// Build matrices for computing the regularization
-		buildRegularizationTemporary(intervals, false);
-
-		// Ask for memory for the residues
-		final int K;
-		if (targetPh!=null) K = targetPh.getPoints().size();
-		else                K = 0;
-		double [] dxTargetToSource = new double[K];
-		double [] dyTargetToSource = new double[K];
-		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
-
-		// Compute the affine transformation FROM THE TARGET TO THE SOURCE coordinates
-		// Notice that this matrix is independent of the scale (unless it was loaded from
-		// file), but the residues are not
-		double[][] affineMatrix = null;
-		if(this.sourceAffineMatrix != null)
-		{
-			affineMatrix = this.sourceAffineMatrix;
-			// Scale translations in the matrix.
-			affineMatrix[0][2] *= this.sourceFactorWidth;
-			affineMatrix[1][2] *= this.sourceFactorHeight;
-		}
-		else
-		{
-			// NOTE: after version 1.1 the landmarks are always used to calculate
-			// an initial affine transformation (whether the landmarks weight is 0 or not).
-			
-			affineMatrix = computeAffineMatrix(false);			
-		}
-
-		//MiscTools.printMatrix("source affine matrix", affineMatrix);
-		
-		
-		// Incorporate the affine transformation into the spline coefficient
-		for (int i= 0; i<intervals + 3; i++)
-		{
-			final double v = (double)((i - 1) * (targetCurrentHeight - 1)) / (double)intervals;
-			final double xv = affineMatrix[0][2] + affineMatrix[0][1] * v;
-			final double yv = affineMatrix[1][2] + affineMatrix[1][1] * v;
-			for (int j = 0; j < intervals + 3; j++)
-			{
-				final double u = (double)((j - 1) * (targetCurrentWidth - 1)) / (double)intervals;
-				cxTargetToSource[i][j] = xv + affineMatrix[0][0] * u;
-				cyTargetToSource[i][j] = yv + affineMatrix[1][0] * u;
-			}
-		}		
-		
-		// Now refine with the different scales
-		int state;   // state=-1 --> Finish
-		// state= 0 --> Increase deformation detail
-		// state= 1 --> Increase image detail
-		// state= 2 --> Do nothing until the finest image scale
-		if (min_scale_deformation==max_scale_deformation) state=1;
-		else                                              state=0;
-		int s = min_scale_deformation;
-		int step = 0;
-		computeTotalWorkload();
-
-		while (state != -1)
-		{
-			int currentDepth = target.getCurrentDepth();
-
-			// Update the deformation coefficients only in states 0 and 1
-			if (state==0 || state==1)
-			{
-				// Update the deformation coefficients with the error of the landmarks
-				// The following conditional is now useless but it is there to allow
-				// easy changes like applying the landmarks only in the coarsest deformation
-				if (s>=min_scale_deformation)
-				{
-					// Number of intervals at this scale and ask for memory
-					intervals = (int) Math.pow(2, s + sizeCorrectionFactor);
-					final double[][] newcxTargetToSource = new double[intervals+3][intervals+3];
-					final double[][] newcyTargetToSource = new double[intervals+3][intervals+3];
-					
-					// Compute the coefficients at this scale
-					boolean underconstrained = true;
-					// FROM TARGET TO SOURCE.
-					if (divWeight==0 && curlWeight==0)
-						underconstrained=
-							computeCoefficientsScale(intervals, dxTargetToSource, dyTargetToSource, newcxTargetToSource, newcyTargetToSource, false);
-					else
-						underconstrained=
-							computeCoefficientsScaleWithRegularization(
-									intervals, dxTargetToSource, dyTargetToSource, newcxTargetToSource, newcyTargetToSource, false);
-
-					// Incorporate information from the previous scale
-					if (!underconstrained || (step==0 && landmarkWeight!=0))
-					{
-						for (int i=0; i<intervals+3; i++)
-							for (int j=0; j<intervals+3; j++) {
-								cxTargetToSource[i][j]+=newcxTargetToSource[i][j];
-								cyTargetToSource[i][j]+=newcyTargetToSource[i][j];
-							}
-					}
-
-				}
-						
-				// Optimize deformation coefficients
-				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
-						targetWidth > 1, targetHeight > 1);
-				
-				
-				
-			}
-
-			// Prepare for next iteration
-			step++;
-			switch (state)
-			{
-			case 0:
-				// Finer details in the deformation
-				if (s<max_scale_deformation)
-				{
-					cxTargetToSource = propagateCoeffsToNextLevel(intervals, cxTargetToSource, 1);
-					cyTargetToSource = propagateCoeffsToNextLevel(intervals, cyTargetToSource, 1);
-					s++;
-					intervals*=2;
-
-					// Prepare matrices for the regularization term
-					buildRegularizationTemporary(intervals, false);
-
-					if (currentDepth>min_scale_image) state=1;
-					else                              state=0;
-				} else
-					if (currentDepth>min_scale_image) state=1;
-					else                              state=2;
-				break;
-			case 1: // Finer details in the image, go on  optimizing
-			case 2: // Finer details in the image, do not optimize
-				// Compute next state
-				if (state==1) {
-					if      (s==max_scale_deformation && currentDepth==min_scale_image) state=2;
-					else if (s==max_scale_deformation)                                  state=1;
-					else                                                                state=0;
-				} else if (state==2) {
-					if (currentDepth==0) state=-1;
-					else                 state= 2;
-				}
-
-				// Pop another image and prepare the deformation
-				if (currentDepth!=0)
-				{
-					double oldTargetCurrentHeight = targetCurrentHeight;
-					double oldTargetCurrentWidth  = targetCurrentWidth;
-
-					source.popFromPyramid();
-					target.popFromPyramid();
-
-					targetCurrentHeight = target.getCurrentHeight();
-					targetCurrentWidth  = target.getCurrentWidth();
-					targetFactorHeight = target.getFactorHeight();
-					targetFactorWidth  = target.getFactorWidth();
-
-					sourceCurrentHeight = source.getCurrentHeight();
-					sourceCurrentWidth  = source.getCurrentWidth();
-					sourceFactorHeight = source.getFactorHeight();
-					sourceFactorWidth  = source.getFactorWidth();
-
-					// Adapt the transformation to the new image size
-					double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
-					double targetFactorX = (targetCurrentWidth -1) / Math.max(oldTargetCurrentWidth -1, 1.0);
-
-					for (int i=0; i<intervals+3; i++)
-						for (int j=0; j<intervals+3; j++)
-						{
-							cxTargetToSource[i][j] *= targetFactorX;
-							cyTargetToSource[i][j] *= targetFactorY;
-						}
-
-					// Prepare matrices for the regularization term
-					buildRegularizationTemporary(intervals, false);
-				}
-				break;
-			}
-
-			// In accurate_mode reduce the stopping threshold for the last iteration
-			if ((state==0 || state==1) && s==max_scale_deformation &&
-					currentDepth==min_scale_image+1 && accurate_mode==1)
-				stopThreshold /= 10;
-
-		}// end while (state != -1).
-		
-		// Adapt coefficients if necessary
-		if(source.getOriginalImageWidth() > this.targetCurrentWidth)
-		{
-			if(source.isSubOutput() || target.isSubOutput())
-				IJ.log("Adapting coefficients from " + this.sourceCurrentWidth + " to " + this.originalSourceIP.getWidth() + "...");
-			// Adapt the transformation to the new image size
-			double targetFactorY = (target.getOriginalImageHeight() - 1) / (targetCurrentHeight-1);
-			double targetFactorX = (target.getOriginalImageWidth()  - 1) / (targetCurrentWidth -1);
-
-			for (int i=0; i<intervals+3; i++)
-				for (int j=0; j<intervals+3; j++)
-				{
-					cxTargetToSource[i][j] *= targetFactorX;
-					cyTargetToSource[i][j] *= targetFactorY;					
-				}
-			this.targetCurrentHeight = target.getOriginalImageHeight();
-			this.targetCurrentWidth  = target.getOriginalImageWidth();
-			this.sourceCurrentHeight = source.getOriginalImageHeight();
-			this.sourceCurrentWidth  = source.getOriginalImageWidth();
-		}
-
-		// Display final errors.		
-		if(this.outputLevel == 2)
-		{
-			if(this.imageWeight != 0)
-			{
-				IJ.log(" Optimal direct similarity error = " + this.finalDirectSimilarityError);
-			}
-			if(this.curlWeight != 0 || this.divWeight != 0)
-			{
-				IJ.log(" Optimal direct regularization error = " + this.finalDirectRegularizationError);
-			}
-			if(this.landmarkWeight != 0)
-			{
-				IJ.log(" Optimal direct landmark error = " + this.finalDirectLandmarkError);
-			}
-			if(this.consistencyWeight != 0)
-			{
-				IJ.log(" Optimal direct consistency error = " + this.finalDirectConsistencyError);
-			}
-		}
-		
-	} /* end doUnidirectionalRegistration */
-
-	//------------------------------------------------------------------
-	/**
-	 * Initialization for the Unidirectional registration method. Used for testing
-	 * It applies unidirectional
-	 * elastic registration to the selected source and target images.
-	 */
-	public void doUnidirectionalRegistration_Setup()
+	public void doUnidirectionalRegistration()
 	{
-		// This function can only be applied with splines of an odd order
+		doUnidirectionalRegistration(this.min_scale_deformation, this.max_scale_deformation);
+	}
+
+	/**
+	 * Apply unidirectional elastic registration to the selected source and target images.
+	 * 	 * the starting and ending deformation detail can be different from the values used to initialize the transformation
+	 * 	 * This function can only be applied with splines of an odd orde
+	 * @param startingDeformationDetail
+	 * @param endingDeformationDetail
+	 */
+	public void doUnidirectionalRegistration(int startingDeformationDetail, int endingDeformationDetail)
+	{
+
+		//the range of allowed values for min_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine)
+		//the range of allowed values for max_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine, 4 - Super Fine)
+
+		//startingDeformationDetail and endingDeformationDetail are limited by the values used when initializing
+		startingDeformationDetail = Math.max(startingDeformationDetail, this.min_scale_deformation);
+		endingDeformationDetail = Math.min(endingDeformationDetail, this.max_scale_deformation);
 
 		// Bring into consideration the image/coefficients at the smallest scale
 		source.popFromPyramid();
 		target.popFromPyramid();
+
+		//The constant here is 5 because
+		// 4 is the maximum deformation detail allowed by the algorithm, see the class "Param"
+		// and the starting image pyramid depth is defined by the starting deformation detail
+		while (this.source.getCurrentDepth() > (endingDeformationDetail - startingDeformationDetail + 1)) {
+			source.popFromPyramid();
+			target.popFromPyramid();
+		}
 
 		targetCurrentHeight = target.getCurrentHeight();
 		targetCurrentWidth  = target.getCurrentWidth();
@@ -1116,75 +878,20 @@ public class Transformation
 
 		// size correction factor
 		int sizeCorrectionFactor = 0; //this.targetHeight / (1024  * (int) Math.pow(2, this.maxImageSubsamplingFactor));
-		//System.out.println("Size correction factor = " + sizeCorrectionFactor);
 
-		// Ask memory for the transformation coefficients
-		intervals = (int)Math.pow(2, min_scale_deformation + sizeCorrectionFactor);
+		intervals = (int)Math.pow(2, startingDeformationDetail + sizeCorrectionFactor);
 
+		// These are the transformation coefficients
 		cxTargetToSource = new double[intervals+3][intervals+3];
 		cyTargetToSource = new double[intervals+3][intervals+3];
 
 		// Build matrices for computing the regularization
 		buildRegularizationTemporary(intervals, false);
 
-//		// Ask for memory for the residues
-//		final int K;
-//		if (targetPh!=null) K = targetPh.getPoints().size();
-//		else                K = 0;
-//		double [] dxTargetToSource = new double[K];
-//		double [] dyTargetToSource = new double[K];
-//		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
-
 		// Compute the affine transformation FROM THE TARGET TO THE SOURCE coordinates
-		// Notice that this matrix is independent of the scale (unless it was loaded from
-		// file), but the residues are not
-		double[][] affineMatrix = null;
-		if(this.sourceAffineMatrix != null)
-		{
-			affineMatrix = this.sourceAffineMatrix;
-			// Scale translations in the matrix.
-			affineMatrix[0][2] *= this.sourceFactorWidth;
-			affineMatrix[1][2] *= this.sourceFactorHeight;
-		}
-		else
-		{
-			// NOTE: after version 1.1 the landmarks are always used to calculate
-			// an initial affine transformation (whether the landmarks weight is 0 or not).
+		setupAffineMtx_TargetToSource();
 
-			affineMatrix = computeAffineMatrix(false);
-		}
-
-		//MiscTools.printMatrix("source affine matrix", affineMatrix);
-
-
-		// Incorporate the affine transformation into the spline coefficient
-		for (int i= 0; i<intervals + 3; i++)
-		{
-			final double v = (double)((i - 1) * (targetCurrentHeight - 1)) / (double)intervals;
-			final double xv = affineMatrix[0][2] + affineMatrix[0][1] * v;
-			final double yv = affineMatrix[1][2] + affineMatrix[1][1] * v;
-			for (int j = 0; j < intervals + 3; j++)
-			{
-				final double u = (double)((j - 1) * (targetCurrentWidth - 1)) / (double)intervals;
-				cxTargetToSource[i][j] = xv + affineMatrix[0][0] * u;
-				cyTargetToSource[i][j] = yv + affineMatrix[1][0] * u;
-			}
-		}
-
-	}
-
-	/**
-	 * Second part of the Unidirectional registration method. Used for testing
-	 * It applies unidirectional
-	 * elastic registration to the selected source and target images.
-	 * This function can only be applied with splines of an odd order
-	 */
-	public void doUnidirectionalRegistration_Optimization()
-	{
-
-		optimizationErrorValues = new ArrayList<>();
-
-		// residues
+		// initial residues are based on landmarks, if there are any.
 		final int K;
 		if (targetPh!=null) K = targetPh.getPoints().size();
 		else                K = 0;
@@ -1192,26 +899,46 @@ public class Transformation
 		double [] dyTargetToSource = new double[K];
 		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
 
+		//curDeformationDetail will iterate from min_scale_deformation to max_scale_deformation
+		//imageDepth will iterate from target.getCurrentDepth() down to 0
+		//The process is:
+		//one optimization with initial values
+		//increment curDeformationDetail and optimize
+		//decrement imageDepth and optimize - check the error function value, and/or store it to compare next time
+
 		// state= 0 --> Increase deformation detail
 		// state= 1 --> Increase image detail
 		// state= 2 --> Do nothing until the finest image scale
 		// state=-1 --> Finish
 
 		int state;
-		if (min_scale_deformation==max_scale_deformation) state=1;
-		else                                              state=0;
+		if (startingDeformationDetail==endingDeformationDetail) state=1;
+		else                                              		state=0;
 
-		//start with the smallest set of coefficients (coarsest deformation)
-		int curDeformationDetail = min_scale_deformation;
+		//start with the smallest set of coefficients, which is lowest number, and increment
+		int curDeformationDetail = startingDeformationDetail;
 		int step = 0;
 		computeTotalWorkload();
 
+		//optimization error - we want to track how it changes when we change deformation detail
+//		double prevOptimError = Double.MAX_VALUE;
+		//store the initial coefficients so we can reset to the beginning if necessary
+//		double[][] cxTargetToSource_initial = Arrays.stream(cxTargetToSource).map((double[] row) -> row.clone())
+//				.toArray((int length) -> new double[length][]);
+//		double[][] cyTargetToSource_initial = Arrays.stream(cyTargetToSource).map((double[] row) -> row.clone())
+//				.toArray((int length) -> new double[length][]);
+
+		optimizationErrorValues = new ArrayList<>();
+
 		while (state != -1)
 		{
+			//start with image depth at highest value and decrement
 			int curImageDepth = target.getCurrentDepth();
 
 			// Update the deformation coefficients only in states 0 and 1
-			if (state==0 || state==1)
+			if ((curDeformationDetail >= startingDeformationDetail) &&
+					(curDeformationDetail <= endingDeformationDetail) &&
+					(state==0 || state==1))
 			{
 
 				// Update the deformation coefficients with the error of the landmarks
@@ -1223,8 +950,68 @@ public class Transformation
 				}
 
 				// Optimize deformation coefficients
-				optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
-						targetWidth > 1, targetHeight > 1);
+				List<Double> curOptimizationErrorValues = optimizeCoeffs(intervals, stopThreshold,
+						cxTargetToSource, cyTargetToSource, targetWidth > 1, targetHeight > 1);
+				optimizationErrorValues.addAll(curOptimizationErrorValues);
+
+//				optimizationErrorValues.add(-1.0);
+
+				// check how changing image depth affected the error function
+				// if state==0, it means that last iteration state was 1,
+				// because we just changed the image depth on the previous iteration,
+				// and state was changed to 0 at the end of the iteration
+//				if (false) {
+////				if (state==0) {
+//
+//					// compare error from the end of the last image depth and
+//					// the beginning of the current image depth
+//					double curOptimError = curOptimizationErrorValues.get(curOptimizationErrorValues.size()-1);
+//
+//					// if the error increased, reset the coefficients to the initial and
+//					// go back to the previous iteration
+//					if (prevOptimError < curOptimError) {
+//
+//						//get the unoptimized coefficients
+////						cxTargetToSource = Arrays.stream(cxTargetToSource_initial).map((double[] row) -> row.clone())
+////								.toArray((int length) -> new double[length][]);
+////						cyTargetToSource = Arrays.stream(cyTargetToSource_initial).map((double[] row) -> row.clone())
+////								.toArray((int length) -> new double[length][]);
+////
+////						//basically re-do the previous iteration
+////
+////						//go back up one level in the image pyramid
+////						undoAdaptCoeffsToNewImage(cxTargetToSource, cyTargetToSource);
+////						undoGetNextImageInPyramid();
+////						buildRegularizationTemporary(intervals, false);
+////						curImageDepth = target.getCurrentDepth();
+////
+////						//re-do previous iteration
+////						calculateNewCoefficients(dxTargetToSource, dyTargetToSource, curDeformationDetail, step);
+////						curOptimizationErrorValues = optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
+////								targetWidth > 1, targetHeight > 1);
+////						optimizationErrorValues.addAll(curOptimizationErrorValues);
+////
+////						//go back down one level in the image pyramid
+////						getNextImageInPyramid();
+////						adaptCoeffsToNewImage(cxTargetToSource, cyTargetToSource);
+////						buildRegularizationTemporary(intervals, false);
+////						curImageDepth = target.getCurrentDepth();
+////
+////						//now redo the optimization for this iteration
+//						calculateNewCoefficients(dxTargetToSource, dyTargetToSource, curDeformationDetail, step);
+//						curOptimizationErrorValues = optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
+//								targetWidth > 1, targetHeight > 1);
+//						optimizationErrorValues.addAll(curOptimizationErrorValues);
+//
+//					}
+////					else {
+//						//if the error decreased, continue
+//						prevOptimError = curOptimizationErrorValues.get(curOptimizationErrorValues.size()-1);
+////					}
+//
+//				} else if (state == 1) {
+////					prevOptimError = curOptimizationErrorValues.get(curOptimizationErrorValues.size()-1);
+//				}
 
 			}
 
@@ -1234,57 +1021,39 @@ public class Transformation
 			if (state==0) {
 
 				// Increase detail of the deformation in this iteration
-				if (curDeformationDetail < max_scale_deformation) {
+				if (curDeformationDetail < endingDeformationDetail) {
 
 					cxTargetToSource = propagateCoeffsToNextLevel(intervals, cxTargetToSource, 1);
 					cyTargetToSource = propagateCoeffsToNextLevel(intervals, cyTargetToSource, 1);
+
+//					//also update the initial (unoptimized) coeffs in case we want to reset
+//					cxTargetToSource_initial = propagateCoeffsToNextLevel(intervals, cxTargetToSource_initial, 1);
+//					cyTargetToSource_initial = propagateCoeffsToNextLevel(intervals, cyTargetToSource_initial, 1);
+
 					curDeformationDetail++;
 					intervals *= 2;
 
 					// Prepare matrices for the regularization term
 					buildRegularizationTemporary(intervals, false);
 
-					//now that we increased deformation detail, we will increase image detail (change to state 1)
-					if (curImageDepth > min_scale_image) state = 1;
+				}
 
-				} else if (curImageDepth > min_scale_image) {
-					//we cannot increase deformation detail anymore, but we can increase image detail in the next iteration
+				//decide what to do after the next round of optimization
+				if (curImageDepth > min_scale_image) {
+					// after the next round of optimization, we will decrease imageDepth
 					state = 1;
 				} else {
-					//we cannot increase deformation or image detail anymore
+					//do not optimize in the next iteration, but try to getNextImageInPyramid
 					state = 2;
 				}
 
 			} else {
 
-				//increase image detail
-				// Pop another image and prepare the deformation
+				//increase image detail - Pop another image and prepare the deformation
 				if (curImageDepth != 0) {
-					double oldTargetCurrentHeight = targetCurrentHeight;
-					double oldTargetCurrentWidth = targetCurrentWidth;
-
-					source.popFromPyramid();
-					target.popFromPyramid();
-
-					targetCurrentHeight = target.getCurrentHeight();
-					targetCurrentWidth = target.getCurrentWidth();
-					targetFactorHeight = target.getFactorHeight();
-					targetFactorWidth = target.getFactorWidth();
-
-					sourceCurrentHeight = source.getCurrentHeight();
-					sourceCurrentWidth = source.getCurrentWidth();
-					sourceFactorHeight = source.getFactorHeight();
-					sourceFactorWidth = source.getFactorWidth();
-
-					// Adapt the transformation to the new image size
-					double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
-					double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
-
-					for (int i = 0; i < intervals + 3; i++)
-						for (int j = 0; j < intervals + 3; j++) {
-							cxTargetToSource[i][j] *= targetFactorX;
-							cyTargetToSource[i][j] *= targetFactorY;
-						}
+					getNextImageInPyramid();
+					adaptCoeffsToNewImage(cxTargetToSource, cyTargetToSource);
+//					adaptCoeffsToNewImage(cxTargetToSource_initial, cyTargetToSource_initial);
 
 					// Prepare matrices for the regularization term
 					buildRegularizationTemporary(intervals, false);
@@ -1292,20 +1061,22 @@ public class Transformation
 
 				//get the next state
 				if (state==1) {
-					if (curDeformationDetail < max_scale_deformation) {
+					if (curDeformationDetail < endingDeformationDetail) {
 						//we can increase deformation detail in next iteration
 						state = 0;
 					} else if (curImageDepth == min_scale_image) {
-						//we cannot increase deformation detail or image detail anymore
+						//if curDeformationDetail has already reached max value, but the curImageDepth is ?
 						state = 2;
 					}
-				} else if ((state == 2) && (curImageDepth == 0)) {
+				}
+
+				//if curImageDepth hasn't reached 0 optimization will skip next time, but imageDepth will be decremented
+				else if ((state == 2) && (curImageDepth == 0)) {
 					//we are done if the current depth of the image pyramid is 0
 					state = -1;
 				}
 
 			}
-
 
 			// In accurate_mode reduce the stopping threshold for the last iteration
 			if ((state==0 || state==1) &&
@@ -1361,32 +1132,296 @@ public class Transformation
 
 	} /* end doUnidirectionalRegistration */
 
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(String type) {
+		return doUnidirectionalRegistration_AutoTune_Resolution(null, null, type, false);
+	}
+
 	/**
-	 * for testing - run optimizeCoeffs one time
+	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
+	 * If you say "usePixelDiff" = true, then instead of using the error function the actual L2 pixel diff between
+	 * the target and warped source images will be used to determine the best resolutions to use.
+	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
+	 * @param sourceMtxInt used to evaluate pixel-wise L2 diff
+	 * @param targetMtxInt used to evaluate pixel-wise L2 diff
+	 * @param type can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
+	 * @param usePixelDiff set to true to use pixel-wise L2 error instead of the regular bunwarpJ error function
+	 * @return
 	 */
-	public void testOptimizeCoeffs() {
-		optimizationErrorValues = new ArrayList<>();
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt, String type,
+																  boolean usePixelDiff) {
 
-		// residues
-		final int K;
-		if (targetPh!=null) K = targetPh.getPoints().size();
-		else                K = 0;
-		double [] dxTargetToSource = new double[K];
-		double [] dyTargetToSource = new double[K];
-		computeInitialResidues(dxTargetToSource,dyTargetToSource, false);
+		//the range of allowed values for min_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine)
+		//the range of allowed values for max_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine, 4 - Super Fine)
 
-		int s = min_scale_deformation;
-		int step = 0;
+		//the minimum resolution and max resolutions we can test are limited by the min_scale_deformation
+		// and max_scale_deformation fields specified in the options.
+		int minResolutionToUse = this.min_scale_deformation;
+		int maxResolutionToUse = this.max_scale_deformation;
 
-		int currentDepth = target.getCurrentDepth();
+		List<int[]> resolutionPairs = new ArrayList<>();
+		switch (type){
+			case "start":
+			{
+				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
+					resolutionPairs.add(new int[]{i,maxResolutionToUse});
+				}
+			} break;
+			case "end":
+			{
+				for (int j = minResolutionToUse; j <= maxResolutionToUse; j++) {
+					resolutionPairs.add(new int[]{minResolutionToUse,j});
+				}
+			} break;
+			case "both":
+			{
+				//try all pairs of minResolutionToUse and maxResolutionToUse
+				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
+					for (int j = i; j <= maxResolutionToUse; j++) {
+						resolutionPairs.add(new int[]{i,j});
+					}
+				}
+			} break;
+		}
 
-		// Update the deformation coefficients with the error of the landmarks
+		// store results for each resolution setting that we test, and at the end keep the best results.
+		List<Double> errValues = new ArrayList<>();
+		List<double[][]> cxCoeffs = new ArrayList<>();
+		List<double[][]> cyCoeffs = new ArrayList<>();
+		List<List<Double>> optimErrs = new ArrayList<>();
+		List<Integer> intervalsList = new ArrayList<>();
 
-		calculateNewCoefficients(dxTargetToSource, dyTargetToSource, s, step);
+		for (int[] curPair : resolutionPairs) {
 
-		// Optimize deformation coefficients
-		optimizeCoeffs(intervals, stopThreshold, cxTargetToSource, cyTargetToSource,
-				targetWidth > 1, targetHeight > 1);
+			this.reset();
+
+			doUnidirectionalRegistration(curPair[0], curPair[1]);
+
+			if (usePixelDiff) {
+				int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
+				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
+				errValues.add(pixelErr);
+			} else {
+//				double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
+				double finalErr = this.getFinalDirectSimilarityError();
+				errValues.add(finalErr);
+			}
+
+			cxCoeffs.add(this.cxTargetToSource);
+			cyCoeffs.add(this.cyTargetToSource);
+			optimErrs.add(this.optimizationErrorValues);
+			intervalsList.add(this.intervals);
+
+		}
+
+		//find out which resolution gave min error
+		double minError = Double.MAX_VALUE;
+		int minIdx = -1;
+		for (int i=0; i<errValues.size(); i++) {
+			if (errValues.get(i) < minError) {
+				minError = errValues.get(i);
+				minIdx = i;
+			}
+		}
+
+		this.cxTargetToSource = cxCoeffs.get(minIdx);
+		this.cyTargetToSource = cyCoeffs.get(minIdx);
+		this.optimizationErrorValues = optimErrs.get(minIdx);
+		this.intervals = intervalsList.get(minIdx);
+
+		this.min_scale_deformation = resolutionPairs.get(minIdx)[0];
+		this.max_scale_deformation = resolutionPairs.get(minIdx)[1];
+
+		return resolutionPairs.get(minIdx);
+	}
+
+	public double doUnidirectionalRegistration_AutoTune_Weights(int[][] sourceMtxInt, int[][] targetMtxInt,
+																  boolean usePixelDiff) {
+
+		//the range of allowed values for min_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine)
+		//the range of allowed values for max_scale_deformation is defined in the Param class-
+		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine, 4 - Super Fine)
+
+		//the minimum resolution and max resolutions we can test are limited by the min_scale_deformation
+		// and max_scale_deformation fields specified in the options.
+		double curDivWeight = 0;
+		double curCurlWeight = 0;
+
+		// temporarily store results for each resolution setting that we test,
+		// and at the end we will keep the best results.
+		List<Double> errValues = new ArrayList<>();
+		List<double[][]> cxCoeffs = new ArrayList<>();
+		List<double[][]> cyCoeffs = new ArrayList<>();
+		List<List<Double>> optimErrs = new ArrayList<>();
+		List<Integer> intervalsList = new ArrayList<>();
+
+//		for (curDivWeight=0; curDivWeight<=1; curDivWeight=curDivWeight+0.1) {
+		for (curCurlWeight=0; curCurlWeight<=1; curCurlWeight=curCurlWeight+0.1) {
+
+			this.reset();
+
+			this.curlWeight = curCurlWeight;
+
+			doUnidirectionalRegistration(this.min_scale_deformation, this.max_scale_deformation);
+
+			if (usePixelDiff) {
+				int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
+				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
+				errValues.add(pixelErr);
+			} else {
+				double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
+				errValues.add(finalErr);
+			}
+
+			cxCoeffs.add(this.cxTargetToSource);
+			cyCoeffs.add(this.cyTargetToSource);
+			optimErrs.add(this.optimizationErrorValues);
+			intervalsList.add(this.intervals);
+
+		}
+
+		//find out which resolution gave min error
+		double minError = Double.MAX_VALUE;
+		int minIdx = -1;
+		for (int i=0; i<errValues.size(); i++) {
+			if (errValues.get(i) < minError) {
+				minError = errValues.get(i);
+				minIdx = i;
+			}
+		}
+
+		this.cxTargetToSource = cxCoeffs.get(minIdx);
+		this.cyTargetToSource = cyCoeffs.get(minIdx);
+		this.optimizationErrorValues = optimErrs.get(minIdx);
+		this.intervals = intervalsList.get(minIdx);
+
+		return 0.1*minIdx;
+	}
+
+	/**
+	 * Reset the transformation and pyramids to before doUnidirectionalRegistration() or doUnidirectionalRegistration() was called,
+	 * allowing for a complete recalculation of the transformation using different parameters such as weights
+	 * and resolutions
+	 */
+	public void reset() {
+		source.resetPyramid();
+		target.resetPyramid();
+		swxTargetToSource = null;
+		swyTargetToSource = null;
+		intervals = -1;
+	}
+
+	private double calcPixelDiff(int[][] mtx1, int[][] mtx2) {
+		double sum = 0;
+		for (int i=0; i<mtx1.length; i++) {
+			for (int j=0; j<mtx1[0].length; j++) {
+				sum += Math.pow(mtx1[i][j] - mtx2[i][j], 2.0);
+			}
+		}
+		return (Math.sqrt(sum));
+	}
+
+	/**
+	 * create an initial affine matrix and incorporate it into the transformation coefficients cxTargetToSource and
+	 * cyTargetToSource
+	 */
+	private void setupAffineMtx_TargetToSource() {
+
+		// Compute the affine transformation FROM THE TARGET TO THE SOURCE coordinates
+		// Notice that this matrix is independent of the scale (unless it was loaded from
+		// file), but the residues are not
+		double[][] affineMatrix = null;
+		if(this.sourceAffineMatrix != null)
+		{
+			affineMatrix = this.sourceAffineMatrix;
+			// Scale translations in the matrix.
+			affineMatrix[0][2] *= this.sourceFactorWidth;
+			affineMatrix[1][2] *= this.sourceFactorHeight;
+		} else {
+			// NOTE: after version 1.1 the landmarks are always used to calculate
+			// an initial affine transformation (whether the landmarks weight is 0 or not).
+			affineMatrix = computeAffineMatrix(false);
+		}
+
+		// Incorporate the affine transformation into the spline coefficient
+		for (int i= 0; i<intervals + 3; i++)
+		{
+			final double v = (double)((i - 1) * (targetCurrentHeight - 1)) / (double)intervals;
+			final double xv = affineMatrix[0][2] + affineMatrix[0][1] * v;
+			final double yv = affineMatrix[1][2] + affineMatrix[1][1] * v;
+			for (int j = 0; j < intervals + 3; j++)
+			{
+				final double u = (double)((j - 1) * (targetCurrentWidth - 1)) / (double)intervals;
+				cxTargetToSource[i][j] = xv + affineMatrix[0][0] * u;
+				cyTargetToSource[i][j] = yv + affineMatrix[1][0] * u;
+			}
+		}
+
+	}
+
+	private void getNextImageInPyramid() {
+		oldTargetCurrentHeight = targetCurrentHeight;
+		oldTargetCurrentWidth = targetCurrentWidth;
+
+		source.popFromPyramid();
+		target.popFromPyramid();
+
+		targetCurrentHeight = target.getCurrentHeight();
+		targetCurrentWidth = target.getCurrentWidth();
+		targetFactorHeight = target.getFactorHeight();
+		targetFactorWidth = target.getFactorWidth();
+
+		sourceCurrentHeight = source.getCurrentHeight();
+		sourceCurrentWidth = source.getCurrentWidth();
+		sourceFactorHeight = source.getFactorHeight();
+		sourceFactorWidth = source.getFactorWidth();
+	}
+
+	private void adaptCoeffsToNewImage(double[][] aCxTargetToSource, double[][] aCyTargetToSource) {
+		// Adapt the transformation to the new image size
+		double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
+		double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
+
+		for (int i = 0; i < intervals + 3; i++) {
+			for (int j = 0; j < intervals + 3; j++) {
+				aCxTargetToSource[i][j] *= targetFactorX;
+				aCyTargetToSource[i][j] *= targetFactorY;
+			}
+		}
+	}
+
+	private void undoAdaptCoeffsToNewImage(double[][] aCxTargetToSource, double[][] aCyTargetToSource) {
+		// Adapt the transformation to the new image size
+		double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
+		double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
+
+		for (int i = 0; i < intervals + 3; i++) {
+			for (int j = 0; j < intervals + 3; j++) {
+				aCxTargetToSource[i][j] /= targetFactorX;
+				aCyTargetToSource[i][j] /= targetFactorY;
+			}
+		}
+	}
+
+	private void undoGetNextImageInPyramid() {
+
+		source.undoPopFromPyramid();
+		target.undoPopFromPyramid();
+
+		targetCurrentHeight = target.getCurrentHeight();
+		targetCurrentWidth = target.getCurrentWidth();
+		targetFactorHeight = target.getFactorHeight();
+		targetFactorWidth = target.getFactorWidth();
+
+		sourceCurrentHeight = source.getCurrentHeight();
+		sourceCurrentWidth = source.getCurrentWidth();
+		sourceFactorHeight = source.getFactorHeight();
+		sourceFactorWidth = source.getFactorWidth();
+
+		// Prepare matrices for the regularization term
+		buildRegularizationTemporary(intervals, false);
 	}
 
 	public void calculateNewCoefficients(double [] dxTargetToSource, double [] dyTargetToSource, int s, int step) {
@@ -1419,8 +1454,6 @@ public class Transformation
 		}
 
 	}
-
-
 
 	/*--------------------------------------------------------------------------*/
 	/**
@@ -1993,9 +2026,6 @@ public class Transformation
 		if(bIsReverse) P11_SourceToTarget = P11;
 		else           P11_TargetToSource = P11;
 
-		//the default value of elements in a double array is 0, initializing to 0 is not necessary
-//		for (int i=0; i<M2; i++)
-//			for (int j=0; j<M2; j++) P11[i][j]=0.0;
 		build_Matrix_Rq1q2(intervals, divWeight           , 2, 0, P11, bIsReverse);
 		build_Matrix_Rq1q2(intervals, divWeight+curlWeight, 1, 1, P11, bIsReverse);
 		build_Matrix_Rq1q2(intervals,           curlWeight, 0, 2, P11, bIsReverse);
@@ -2005,8 +2035,6 @@ public class Transformation
 		if(bIsReverse) P22_SourceToTarget = P22;
 		else           P22_TargetToSource = P22;
 
-//		for (int i=0; i<M2; i++)
-//			for (int j=0; j<M2; j++) P22[i][j]=0.0;
 		build_Matrix_Rq1q2(intervals, divWeight           , 0, 2, P22, bIsReverse);
 		build_Matrix_Rq1q2(intervals, divWeight+curlWeight, 1, 1, P22, bIsReverse);
 		build_Matrix_Rq1q2(intervals,           curlWeight, 2, 0, P22, bIsReverse);
@@ -2016,8 +2044,6 @@ public class Transformation
 		if(bIsReverse) P12_SourceToTarget = P12;
 		else           P12_TargetToSource = P12;
 
-//		for (int i=0; i<M2; i++)
-//			for (int j=0; j<M2; j++) P12[i][j]=0.0;
 		build_Matrix_Rq1q2q3q4(intervals, 2*divWeight , 2, 0, 1, 1, P12, bIsReverse);
 		build_Matrix_Rq1q2q3q4(intervals, 2*divWeight , 1, 1, 0, 2, P12, bIsReverse);
 		build_Matrix_Rq1q2q3q4(intervals,-2*curlWeight, 0, 2, 1, 1, P12, bIsReverse);
@@ -4874,9 +4900,9 @@ public class Transformation
 	 * @param thChangef
 	 * @param cxTargetToSource x- B-spline coefficients storing the target to source deformation
 	 * @param cyTargetToSource y- B-spline coefficients storing the target to source deformation
-	 * @return energy function value
+	 * @return energy function values for each iteration of optimization that improved (minimized) the energy function
 	 */
-	private double optimizeCoeffs(
+	private List<Double> optimizeCoeffs(
 			int intervals,
 			double thChangef,
 			double [][]cxTargetToSource,
@@ -4891,7 +4917,7 @@ public class Transformation
 		}
 		
 		if (dialog!=null && dialog.isStopRegistrationSet())
-			return 0.0;
+			return new ArrayList<>();
 
 		final double TINY               = FLT_EPSILON;
 		final double EPS                = 3.0e-8F;
@@ -4948,12 +4974,16 @@ public class Transformation
 		this.swyTargetToSource.precomputed_prepareForInterpolation(
 				target.getCurrentHeight(), target.getCurrentWidth(), intervals);
 
-		// First computation of the energy (similarity + landmarks + regularization)
+		//this is the sum of the pixels in the image with the current transformation applied
 		double[] imagesSumPixels_initial = new double[2];
+
+		// First computation of the energy (similarity + landmarks + regularization)
 		//f = evaluateSimilarity(x, intervals, grad, false, false, false);
 		f = evaluateSimilarityMultiThread(x, intervals, grad, false, false, imagesSumPixels_initial);
 
-		if (saveMarquardtOptim) optimizationErrorValues.add(f);
+		//save the value of the error function at each iteration of optimization
+		List<Double> resultOptimizationErrorValues = new ArrayList<>();
+		resultOptimizationErrorValues.add(f);
 		if (showMarquardtOptim) IJ.log("f(1)="+f);
 
 		/* Initially the hessian is the identity matrix multiplied by
@@ -5010,9 +5040,8 @@ public class Transformation
 			//f = evaluateSimilarity(x, intervals, grad, false, false, false);
 			double[] imagesSumPixels_current = new double[2];
 			f = evaluateSimilarityMultiThread(x, intervals, grad, false, false, imagesSumPixels_current);
-			if (saveMarquardtOptim) optimizationErrorValues.add(f);
 
-			//check for large change in pixels sum, for the case where the transformation zeros out the image
+			//check for large decrease in pixels sum, for the case where the transformation zeros out the image
 			double sourcePixelSumDiff = imagesSumPixels_initial[0] - imagesSumPixels_current[0];
 			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > 0.7) {
 				f = 1.0/FLT_EPSILON;
@@ -5026,6 +5055,8 @@ public class Transformation
 			/* Update lambda -------------------------------------------------- */
 			if (rescuedf > f)
 			{
+				resultOptimizationErrorValues.add(f);
+
 				// We save the last energy terms values in order to be displayed.
 				this.finalDirectConsistencyError = this.partialDirectConsitencyError;
 				this.finalDirectSimilarityError  = this.partialDirectSimilarityError;
@@ -5148,7 +5179,7 @@ public class Transformation
 			}
 
 		ProgressBar.skipProgressBar(maxiter-iter);
-		return f;
+		return resultOptimizationErrorValues;
 	}
 	
 	
@@ -7124,44 +7155,42 @@ public class Transformation
 		}
 		if (only_image) landmarkError = 0;
 		
-		
-		
+
 		// Finish computations .............................................................
 		// Add all gradient terms (similarity + regularization + landmarks)
 		for (int k=0; k<twiceNk; k++)
 			grad[k] += vgradreg[k] + vgradland[k];
 
 
-		if (showMarquardtOptim)
+		String s = bIsReverse ? "(t-s)" : "(s-t)";
+		if (imageWeight != 0)
 		{
-			String s = bIsReverse ? new String("(t-s)") : new String("(s-t)");
-			if (imageWeight != 0) 
-			{
-				IJ.log("    Image          error " + s + ": " + imageSimilarity);
-				if(bIsReverse)
-					this.partialInverseSimilarityError = imageSimilarity;
-				else
-					this.partialDirectSimilarityError = imageSimilarity;
+			if (showMarquardtOptim) IJ.log("    Image          error " + s + ": " + imageSimilarity);
 
-			}
-			if (landmarkWeight != 0)               
-			{
-				IJ.log("    Landmark       error " + s + ": " + landmarkError);
-				if(bIsReverse)
-					this.partialInverseLandmarkError = landmarkError;
-				else
-					this.partialDirectLandmarkError = landmarkError;
-			}
-			if (divWeight != 0 || curlWeight != 0)
-			{
-				IJ.log("    Regularization error " + s + ": " + regularization);
-				if(bIsReverse)
-					this.partialInverseRegularizationError = regularization;
-				else
-					this.partialDirectRegularizationError = regularization;
-					
-			}
+			if(bIsReverse)
+				this.partialInverseSimilarityError = imageSimilarity;
+			else
+				this.partialDirectSimilarityError = imageSimilarity;
+
 		}
+		if (landmarkWeight != 0)
+		{
+			if (showMarquardtOptim) IJ.log("    Landmark       error " + s + ": " + landmarkError);
+
+			if(bIsReverse)
+				this.partialInverseLandmarkError = landmarkError;
+			else
+				this.partialDirectLandmarkError = landmarkError;
+		}
+		if (divWeight != 0 || curlWeight != 0)
+		{
+			if (showMarquardtOptim) IJ.log("    Regularization error " + s + ": " + regularization);
+			if(bIsReverse)
+				this.partialInverseRegularizationError = regularization;
+			else
+				this.partialDirectRegularizationError = regularization;
+		}
+
 		return imageSimilarity + landmarkError + regularization;
 	}
 	
@@ -7272,7 +7301,6 @@ public class Transformation
 			
 			// Loop over all points in the source image (rectangle)
 			int n = 0;
-			
 
 			final double []I1D = new double[2]; // Space for the first derivatives of I1
 
@@ -7794,6 +7822,30 @@ public class Transformation
 
 	public List<Double> getOptimizationErrorValues() {
 		return optimizationErrorValues;
+	}
+
+	public int getMin_scale_deformation() {
+		return min_scale_deformation;
+	}
+
+	public int getMax_scale_deformation() {
+		return max_scale_deformation;
+	}
+
+	public double getFinalDirectSimilarityError() {
+		return finalDirectSimilarityError;
+	}
+
+	public double getFinalDirectRegularizationError() {
+		return finalDirectRegularizationError;
+	}
+
+	public double getFinalDirectLandmarkError() {
+		return finalDirectLandmarkError;
+	}
+
+	public double getFinalDirectConsistencyError() {
+		return finalDirectConsistencyError;
 	}
 
 } // end class Transformation
