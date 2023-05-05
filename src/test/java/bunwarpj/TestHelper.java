@@ -21,6 +21,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestHelper {
 
+    public static final String RESOURCES_DIR = "src/test/resources/csv";
+
+    public static final String ONE_DIMENSIONAL_DATA_FILE = "1d-data.csv";
+
+    public static final String ONE_DIMENSIONAL_BIN_COUNTS_FILE = "1d-data-bin-counts.csv";
+
+    public static final String ONE_DIMENSIONAL_BIN_INDEXES_FILE = "1d-data-bin-idx.csv";
+
+    public static final String ONE_DIMENSIONAL_CUMULATIVE_SUM_FILE = "1d-data-bin-counts-cumulative-sum.csv";
+
+    public static final String TWO_DIMENSIONAL_DATA_FILE = "2d-data.csv";
+
+    public static final String TWO_DIMENSIONAL_BIN_COUNTS_FILE = "2d-data-bin-counts.csv";
+
     public static HashMap<String, int[][]> importAll_CsvToMtxInt(String dataFolder) throws IOException {
         List<String> csvImageFiles = findFilesOfType(dataFolder, ".csv");
 
