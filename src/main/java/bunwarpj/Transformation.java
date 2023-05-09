@@ -79,6 +79,7 @@ public class Transformation
        Private variables
     ....................................................................*/
 
+
 	/** float epsilon */
 	private final double FLT_EPSILON = (double)Float.intBitsToFloat((int)0x33FFFFFF);
 	/** pyramid flag to indicate the image information is taken from the pyramid */
@@ -235,6 +236,18 @@ public class Transformation
 	private String  fn_tnf_1;
 	/** inverse transformation file name */
 	private String  fn_tnf_2;
+	/**
+	 * (used in Transformation optimizeCoeffs and doUnidirectionalRegistration_AutoTune_Resolution)
+	 * threshold which we use to compare the sum of image pixels in an optimization iteration
+	 * to the initial sum of image pixels. If the current sum of image pixels has decreased
+	 * by a proportion greater than IMAGE_DIFF_THRESHOLD, we set the current optimization error
+	 * to a very large value to indicate that this solution is not optimal.
+	 * In other words, if the (initial sum of pixels - current sum of pixels)/initial sum of pixels
+	 * > IMAGE_DIFF_THRESHOLD, it means that the optimization is converging to a local minimum error
+	 * which occurs because the pixels are all being set to very low or 0 values,
+	 * which makes it appear that the error is going down.
+	 */
+	private double imageSumDecreaseThreshold = 0.7;
 
 	// Transformation estimate
 	/** number of intervals to place B-spline coefficients */
@@ -1187,6 +1200,7 @@ public class Transformation
 
 		// store results for each resolution setting that we test, and at the end keep the best results.
 		List<Double> errValues = new ArrayList<>();
+		List<Double> pixelSumPctDecrease = new ArrayList<>();
 		List<double[][]> cxCoeffs = new ArrayList<>();
 		List<double[][]> cyCoeffs = new ArrayList<>();
 		List<List<Double>> optimErrs = new ArrayList<>();
@@ -1200,8 +1214,24 @@ public class Transformation
 
 			if (usePixelDiff) {
 				int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
-				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
-				errValues.add(pixelErr);
+
+				double originalImageSum, newImageSum;
+				if (!source.is2D()) {
+					originalImageSum = Arrays.stream(sourceMtxInt[0]).sum();
+					newImageSum = Arrays.stream(warpedImageMtx[0]).sum();
+				} else {
+					originalImageSum = getMatrixSum(sourceMtxInt);
+					newImageSum = getMatrixSum(warpedImageMtx);
+				}
+				double pctDecrease = (originalImageSum - newImageSum)/originalImageSum;
+				pixelSumPctDecrease.add(pctDecrease);
+				if (pctDecrease > imageSumDecreaseThreshold) {
+					errValues.add(Double.MAX_VALUE);
+				} else {
+					double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
+					errValues.add(pixelErr);
+				}
+
 			} else {
 //				double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
 				double finalErr = this.getFinalDirectSimilarityError();
@@ -1234,6 +1264,14 @@ public class Transformation
 		this.max_scale_deformation = resolutionPairs.get(minIdx)[1];
 
 		return resolutionPairs.get(minIdx);
+	}
+
+	private int getMatrixSum(int[][] mtx) {
+		int result = 0;
+		for (int i=0; i<mtx.length; i++) {
+			result += Arrays.stream(mtx[i]).sum();
+		}
+		return result;
 	}
 
 	public double doUnidirectionalRegistration_AutoTune_Weights(int[][] sourceMtxInt, int[][] targetMtxInt,
@@ -5043,7 +5081,7 @@ public class Transformation
 
 			//check for large decrease in pixels sum, for the case where the transformation zeros out the image
 			double sourcePixelSumDiff = imagesSumPixels_initial[0] - imagesSumPixels_current[0];
-			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > 0.7) {
+			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > imageSumDecreaseThreshold) {
 				f = 1.0/FLT_EPSILON;
 			}
 
@@ -7848,4 +7886,11 @@ public class Transformation
 		return finalDirectConsistencyError;
 	}
 
+	public double getImageSumDecreaseThreshold() {
+		return imageSumDecreaseThreshold;
+	}
+
+	public void setImageSumDecreaseThreshold(double imageSumDecreaseThreshold) {
+		this.imageSumDecreaseThreshold = imageSumDecreaseThreshold;
+	}
 } // end class Transformation

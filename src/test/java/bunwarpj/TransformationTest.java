@@ -7,13 +7,17 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransformationTest {
+
+    private Path resourcePath = Paths.get("", "src/test/resources");
 
     @Test
     void doUnidirectionalRegistration_fine() throws Exception{
@@ -572,7 +576,7 @@ class TransformationTest {
 
     @Test
     /**
-     * (2D data input) Test doUnidirectionalRegistration_AutoTune_StartResolution,
+     * (1D data input) Test doUnidirectionalRegistration_AutoTune_StartResolution,
      * which chooses the optimal starting resolution, leaving the ending resolution fixed
      */
     void doUnidirectionalRegistration_AutoTune_StartResolution_1D() throws Exception{
@@ -621,7 +625,7 @@ class TransformationTest {
 
     @Test
     /**
-     * (2D data input) Test doUnidirectionalRegistration_AutoTune_EndResolution,
+     * (1D data input) Test doUnidirectionalRegistration_AutoTune_EndResolution,
      * which chooses the optimal ending resolution, leaving the starting resolution fixed
      */
     void doUnidirectionalRegistration_AutoTune_EndResolution_1D() throws Exception{
@@ -671,7 +675,7 @@ class TransformationTest {
 
     @Test
     /**
-     * (2D data input) Test doUnidirectionalRegistration_AutoTune_Resolution,
+     * (1D data input) Test doUnidirectionalRegistration_AutoTune_Resolution,
      * which chooses the optimal starting and ending resolutions
      * error is measured by L2 pixel diff between the warped source image and the target image
      * instead of using the bUnwarpJ error term
@@ -715,6 +719,69 @@ class TransformationTest {
 
             int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
                     Paths.get(testContainer.outputFolder, "warped-source_autotune_Res.csv").toString()
+            );
+            assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
+
+        }
+
+    }
+
+    @Test
+    /**
+     * (1D data input) Test doUnidirectionalRegistration_AutoTune_Resolution,
+     * which chooses the optimal starting and ending resolutions
+     * error is measured by L2 pixel diff between the warped source image and the target image
+     * Autotune needs improvement because this was giving a transform that made histogram all 0s
+     */
+    void doUnidirectionalRegistration_Autotune_Resolution_1D_nonoptimal() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = false;
+
+        String inputFolder = this.resourcePath.resolve(
+                Paths.get("csv/1D-bad-transform-autotune")).toString();
+
+        TestContainer testContainer = new TestContainer(inputFolder);
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+        testContainer.warp.setImageSumDecreaseThreshold(0.5);
+
+        int[] resolutionsUsed = testContainer.warp.doUnidirectionalRegistration_AutoTune_Resolution(
+                testContainer.sourceMtxInt, testContainer.targetMtxInt, "both", true);
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
+                testContainer.sourceMtxInt);
+
+        assertTrue(Arrays.stream(warpedImageMtx[0]).max().getAsInt() > 0);
+
+        String baseFileName = "doUnidirectionalRegistration_Autotune_Resolution_1D_nonoptimal";
+        String coeffsFile = baseFileName + "_coeffs";
+        String warpedFile = baseFileName + "warped.csv";
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(testContainer.warp,
+                    testContainer.outputFolder, coeffsFile);
+
+            TestHelper.saveArrayCSV(warpedImageMtx[0],
+                    testContainer.outputFolder, warpedFile, false);
+
+        } else {
+
+            int[] expectedResolutions = new int[] {2,3};
+            assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
+
+            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+                    testContainer.outputFolder, coeffsFile);
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, warpedFile).toString()
             );
             assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
 
