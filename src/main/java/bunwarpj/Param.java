@@ -88,6 +88,19 @@ public class Param {
 	private double scaleCorrection = 0.0;
 	/** percentage of anisotropy correction in initial matrix */
 	private double anisotropyCorrection = 0.0;
+
+	/**
+	 * (used in Transformation optimizeCoeffs and doUnidirectionalRegistration_AutoTune_Resolution)
+	 * threshold which we use to compare the sum of image pixels in an optimization iteration
+	 * to the initial sum of image pixels. If the current sum of image pixels has decreased
+	 * by a proportion greater than IMAGE_DIFF_THRESHOLD, we set the current optimization error
+	 * to a very large value to indicate that this solution is not optimal.
+	 * In other words, if the (initial sum of pixels - current sum of pixels)/initial sum of pixels
+	 * > IMAGE_DIFF_THRESHOLD, it means that the optimization is converging to a local minimum error
+	 * which occurs because the pixels are all being set to very low or 0 values,
+	 * which makes it appear that the error is going down.
+	 */
+	private double imageSumDecreaseThreshold = 0.7;
 	
 	/**
 	 * Empty constructor
@@ -101,6 +114,7 @@ public class Param {
 		this(otherParam.mode, otherParam.img_subsamp_fact, otherParam.min_scale_deformation, otherParam.max_scale_deformation,
 				otherParam.divWeight, otherParam.curlWeight, otherParam.landmarkWeight, otherParam.imageWeight,
 				otherParam.consistencyWeight, otherParam.stopThreshold);
+		this.imageSumDecreaseThreshold = otherParam.imageSumDecreaseThreshold;
 	}
 
 	/**
@@ -238,6 +252,12 @@ public class Param {
 	public double getAnisotropyCorrection() {
 		return anisotropyCorrection;
 	}
-	
-	
+
+	public double getImageSumDecreaseThreshold() {
+		return imageSumDecreaseThreshold;
+	}
+
+	public void setImageSumDecreaseThreshold(double imageSumDecreaseThreshold) {
+		this.imageSumDecreaseThreshold = imageSumDecreaseThreshold;
+	}
 } // end class Param

@@ -93,6 +93,86 @@ class bUnwarpJ_Test {
 
     @Test
     /**
+     * (1D data input) Test computeTransformation_Autotune,
+     * which chooses the optimal starting and ending resolutions
+     * error is measured by L2 pixel diff between the warped source image and the target image
+     */
+    void computeTransformation_Autotune_1D() throws Exception{
+
+        //true if we are saving results, false if we are checking results against a file
+        boolean initResults = true;
+
+        String inputFolder = this.resourcePath.resolve(
+                Paths.get("1D-bad-transform-autotune")).toString();
+
+        TestContainer testContainer = new TestContainer(inputFolder);
+
+        testContainer.options.setImageSumDecreaseThreshold(0.5);
+
+        //copied code from computeTransformationBatch_Autotune
+
+        BSplineModel source = new BSplineModel(testContainer.sourceMtxInt, true);
+        ImagePlus sourceImp = MiscTools.createImagePlusByte(testContainer.sourceMtxInt, "source image");
+        Mask sourceMsk = new Mask(testContainer.sourceMtxInt[0].length, testContainer.sourceMtxInt.length);
+        PointHandler sourcePh = new PointHandler(sourceImp);
+
+        BSplineModel target = new BSplineModel(testContainer.targetMtxInt, true);
+        ImagePlus targetImp = MiscTools.createImagePlusByte(testContainer.targetMtxInt, "target image");
+        Mask targetMsk = new Mask(testContainer.targetMtxInt[0].length, testContainer.targetMtxInt.length);
+        PointHandler targetPh = new PointHandler(targetImp);
+
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 4;
+
+        Transformation warp =
+                bUnwarpJ_.computeTransformation_Autotune(target, source, testContainer.options,
+                        targetImp, sourceImp, targetMsk, sourceMsk,
+                        targetPh, sourcePh, null, null,
+                        testContainer.targetMtxInt, testContainer.sourceMtxInt, "both");
+
+
+//        int[][] trainImgMtx = AAGTestUtils.import_CsvToMtxInt(this.resourcePath.resolve(trainFileName).toString());
+//        int[][] targetImgMtx = AAGTestUtils.import_CsvToMtxInt(this.resourcePath.resolve(targetFileName).toString());
+//
+//        Transformation resultTransform = bUnwarpJ_.computeTransformationBatch(targetImgMtx, trainImgMtx,
+//                options.getbUnwarpJ_options());
+
+        int[] resolutionsUsed = new int[] {warp.getMin_scale_deformation(), warp.getMax_scale_deformation()};
+
+        //apply transformation to source image
+        int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(warp, testContainer.sourceMtxInt);
+
+        String baseFileName = "computeTransformation_Autotune_1D";
+        String coeffsFile = baseFileName + "_coeffs";
+        String warpedFile = baseFileName + "warped.csv";
+
+        if (initResults) {
+
+            TestHelper.saveTransformationCoeffs(warp,
+                    testContainer.outputFolder, coeffsFile);
+
+            TestHelper.saveArrayCSV(warpedImageMtx[0],
+                    testContainer.outputFolder, warpedFile, false);
+
+        } else {
+
+            int[] expectedResolutions = new int[] {2,3};
+            assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
+
+            TestHelper.compareTransformationCoeffsToFile(warp,
+                    testContainer.outputFolder, coeffsFile);
+
+            int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(testContainer.outputFolder, warpedFile).toString()
+            );
+            assertTrue(Arrays.equals(warpedImageMtx[0], expectedWarpedImageMtx[0]));
+
+        }
+
+    }
+
+    @Test
+    /**
      * (2D data input) Compare regular computeTransformationBatch to computeTransformation_Autotune,
      * to make sure both functions give the same results if the same resolutions are used
      */

@@ -490,7 +490,89 @@ public class Transformation
 		this.targetWidth           = target.getWidth();
 		this.targetHeight          = target.getHeight();
 	} // end Transformation
-	
+
+	//------------------------------------------------------------------
+
+	/**
+	 *
+	 * @param parameters
+	 * @param sourceImp
+	 * @param targetImp
+	 * @param source
+	 * @param target
+	 * @param sourcePh
+	 * @param targetPh
+	 * @param sourceMsk
+	 * @param targetMsk
+	 * @param sourceAffineMatrix
+	 * @param targetAffineMatrix
+	 * @param outputLevel
+	 * @param showMarquardtOptim
+	 * @param fn_tnf_1
+	 * @param fn_tnf_2
+	 * @param output_ip_1
+	 * @param output_ip_2
+	 * @param originalSourceIP
+	 * @param originalTargetIP
+	 */
+	public Transformation (
+			Param parameters,
+			final ImagePlus sourceImp,
+			final ImagePlus targetImp,
+			final BSplineModel source,
+			final BSplineModel target,
+			final PointHandler sourcePh,
+			final PointHandler targetPh,
+			final Mask sourceMsk,
+			final Mask targetMsk,
+			final double[][] sourceAffineMatrix,
+			final double[][] targetAffineMatrix,
+			final int outputLevel,
+			final boolean showMarquardtOptim,
+			final String fn_tnf_1,
+			final String fn_tnf_2,
+			final ImagePlus output_ip_1,
+			final ImagePlus output_ip_2,
+			final ImageProcessor originalSourceIP,
+			final ImageProcessor originalTargetIP)
+	{
+		this.sourceImp	      = sourceImp;
+		this.targetImp	      = targetImp;
+		this.source                = source;
+		this.target                = target;
+		this.sourcePh              = sourcePh;
+		this.targetPh              = targetPh;
+		this.sourceMsk             = sourceMsk;
+		this.targetMsk             = targetMsk;
+		this.sourceAffineMatrix    = sourceAffineMatrix;
+		this.targetAffineMatrix    = targetAffineMatrix;
+		this.min_scale_deformation = parameters.min_scale_deformation;
+		this.max_scale_deformation = parameters.max_scale_deformation;
+		this.min_scale_image       = 0;
+		this.divWeight             = parameters.divWeight;
+		this.curlWeight            = parameters.curlWeight;
+		this.landmarkWeight        = parameters.landmarkWeight;
+		this.imageWeight           = parameters.imageWeight;
+		this.consistencyWeight     = parameters.consistencyWeight;
+		this.stopThreshold         = parameters.stopThreshold;
+		this.imageSumDecreaseThreshold = parameters.getImageSumDecreaseThreshold();
+		this.outputLevel           = outputLevel;
+		this.showMarquardtOptim    = showMarquardtOptim;
+		this.accurate_mode         		= parameters.mode;
+		this.fn_tnf_1              		= fn_tnf_1;
+		this.fn_tnf_2              		= fn_tnf_2;
+		this.output_ip_1           		= output_ip_1;
+		this.output_ip_2           		= output_ip_2;
+
+		this.originalSourceIP	  = originalSourceIP;
+		this.originalTargetIP	  = originalTargetIP;
+
+		this.sourceWidth           = source.getWidth();
+		this.sourceHeight          = source.getHeight();
+		this.targetWidth           = target.getWidth();
+		this.targetHeight          = target.getHeight();
+	} // end Transformation
+
 	//------------------------------------------------------------------
 	/**
 	 * Registration method. It applies the consistent and elastic registration

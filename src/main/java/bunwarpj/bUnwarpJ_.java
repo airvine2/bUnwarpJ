@@ -508,13 +508,12 @@ public class bUnwarpJ_ implements PlugIn
                                                        double[][] targetAffineMatrix, double[][] sourceAffineMatrix) {
         // Produce side information
         final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-        final int min_scale_image = 0;
 
         //calculate the BSpline model coefficients for source and target
-        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.setPyramidDepth(imagePyramidDepth);
         target.startPyramids();
 
-        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.setPyramidDepth(imagePyramidDepth);
         source.startPyramids();
 
         // Join threads
@@ -536,15 +535,11 @@ public class bUnwarpJ_ implements PlugIn
 
         final boolean showMarquardtOptim = false;
 
-        final Transformation warp = new Transformation(
+        final Transformation warp = new Transformation(parameter,
                 sourceImp, targetImp, source, target, sourcePh, targetPh,
                 sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-                parameter.min_scale_deformation, parameter.max_scale_deformation,
-                min_scale_image, parameter.divWeight,
-                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
-                parameter.consistencyWeight, parameter.stopThreshold,
-                outputLevel, showMarquardtOptim, parameter.mode,null, null,
-                output_ip[0], output_ip[1], null,
+                outputLevel, showMarquardtOptim, null, null,
+                output_ip[0], output_ip[1],
                 sourceImp.getProcessor(), targetImp.getProcessor());
 
         // Initial affine transform correction values
@@ -624,13 +619,12 @@ public class bUnwarpJ_ implements PlugIn
         parameter.min_scale_deformation = 0;
         parameter.max_scale_deformation = 4;
         final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-        final int min_scale_image = 0;
 
         //calculate the BSpline model coefficients for source and target
-        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.setPyramidDepth(imagePyramidDepth);
         target.startPyramids();
 
-        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.setPyramidDepth(imagePyramidDepth);
         source.startPyramids();
 
         // Join threads
@@ -652,15 +646,11 @@ public class bUnwarpJ_ implements PlugIn
 
         final boolean showMarquardtOptim = false;
 
-        final Transformation warp = new Transformation(
+        final Transformation warp = new Transformation(parameter,
                 sourceImp, targetImp, source, target, sourcePh, targetPh,
                 sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-                parameter.min_scale_deformation, parameter.max_scale_deformation,
-                min_scale_image, parameter.divWeight,
-                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
-                parameter.consistencyWeight, parameter.stopThreshold,
-                outputLevel, showMarquardtOptim, parameter.mode,null, null,
-                output_ip[0], output_ip[1], null,
+                outputLevel, showMarquardtOptim, null, null,
+                output_ip[0], output_ip[1],
                 sourceImp.getProcessor(), targetImp.getProcessor());
 
         // Initial affine transform correction values
