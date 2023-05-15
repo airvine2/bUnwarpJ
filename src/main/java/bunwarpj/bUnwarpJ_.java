@@ -48,7 +48,6 @@ import ij.WindowManager;
 import ij.io.FileSaver;
 import ij.io.Opener;
 import ij.plugin.PlugIn;
-import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
 import java.awt.Dialog;
@@ -267,8 +266,8 @@ public class bUnwarpJ_ implements PlugIn
     {
         //gather all parameters into a Parameter object
         Param paramsToUse = new Param(mode, img_subsamp_fact, min_scale_deformation, max_scale_deformation,
-                divWeight, curlWeight, landmarkWeight, imageWeight, consistencyWeight,
-                stopThreshold);
+                divWeight, curlWeight, landmarkWeight, imageWeight, consistencyWeight, stopThreshold,
+                Param.DEFAULT_OPTIM_IMG_THRESH);
 
         return computeTransformationBatch(targetImp, sourceImp, targetMskIP, sourceMskIP, paramsToUse);
     } // end computeTransformationBatch    
@@ -613,8 +612,8 @@ public class bUnwarpJ_ implements PlugIn
                                                        Mask targetMsk, Mask sourceMsk,
                                                        PointHandler targetPh, PointHandler sourcePh,
                                                        double[][] targetAffineMatrix, double[][] sourceAffineMatrix,
-                                                        int[][] targetImageMtx, int[][] sourceImageMtx,
-                                                                String autotuneType) {
+                                                       int[][] targetImageMtx, int[][] sourceImageMtx,
+                                                       Transformation.AutoresolutionDirection autotuneType) {
         // Produce side information
         parameter.min_scale_deformation = 0;
         parameter.max_scale_deformation = 4;
@@ -665,11 +664,10 @@ public class bUnwarpJ_ implements PlugIn
         long start = System.currentTimeMillis(); // start timing
 
         if(parameter.mode == MainDialog.MONO_MODE) {
-            warp.doUnidirectionalRegistration_AutoTune_Resolution(sourceImageMtx, targetImageMtx, autotuneType,
-                    true);
-        }
-        else
+            warp.doUnidirectionalRegistration_AutoTune_Resolution(sourceImageMtx, targetImageMtx, autotuneType);
+        } else {
             warp.doBidirectionalRegistration();
+        }
 
         long stop = System.currentTimeMillis(); // stop timing
         IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time

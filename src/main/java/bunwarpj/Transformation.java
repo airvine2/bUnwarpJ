@@ -88,6 +88,30 @@ public class Transformation
 	private final boolean ORIGINAL = false;
 	/** degree of the B-splines involved in the transformation */
 	private final int transformationSplineDegree = 3;
+	/**
+	 * (used in Transformation doUnidirectionalRegistration_AutoTune_Resolution, default value)
+	 * threshold which we use to compare the sum of image pixels
+	 * to the initial sum of image pixels when trying to automatically determine
+	 * the optimal minDeformation and maxDeformation value pair in doUnidirectionalRegistration_AutoTune_Resolution.
+	 * If the current sum of transformed image pixels has decreased
+	 * by a proportion greater than autotuneImageSumThreshold, the
+	 * minDeformation and maxDeformation value pair which resulted in that transformation will not be returned
+	 * as the optimal settings
+	 */
+	public static final double AUTOTUNE_DEFAULT_THRESH = 0.5;
+
+	/**
+	 * input param used in doUnidirectionalRegistration_AutoTune_Resolution to specify which parameter
+	 * of the resolution (min or max) to autotune
+	 * start - only tune min resolution
+	 * end - only tune max resolution
+	 * both - tune min and max resolution
+	 */
+	public enum AutoresolutionDirection {
+		start,
+		end,
+		both
+	}
 
 	// Some useful references
 	/** reference to the first output image */
@@ -237,13 +261,13 @@ public class Transformation
 	/** inverse transformation file name */
 	private String  fn_tnf_2;
 	/**
-	 * (used in Transformation optimizeCoeffs and doUnidirectionalRegistration_AutoTune_Resolution)
+	 * (used in Transformation optimizeCoeffs)
 	 * threshold which we use to compare the sum of image pixels in an optimization iteration
-	 * to the initial sum of image pixels. If the current sum of image pixels has decreased
-	 * by a proportion greater than IMAGE_DIFF_THRESHOLD, we set the current optimization error
+	 * to the initial sum of image pixels. If the current sum of the transformed image has decreased
+	 * by a proportion greater than imageSumDecreaseThreshold, the current optimization error is set
 	 * to a very large value to indicate that this solution is not optimal.
 	 * In other words, if the (initial sum of pixels - current sum of pixels)/initial sum of pixels
-	 * > IMAGE_DIFF_THRESHOLD, it means that the optimization is converging to a local minimum error
+	 * > imageSumDecreaseThreshold, it means that the optimization is converging to a local minimum error
 	 * which occurs because the pixels are all being set to very low or 0 values,
 	 * which makes it appear that the error is going down.
 	 */
@@ -555,7 +579,7 @@ public class Transformation
 		this.imageWeight           = parameters.imageWeight;
 		this.consistencyWeight     = parameters.consistencyWeight;
 		this.stopThreshold         = parameters.stopThreshold;
-		this.imageSumDecreaseThreshold = parameters.getImageSumDecreaseThreshold();
+		this.imageSumDecreaseThreshold = parameters.getOptimizationImageDecreaseThresh();
 		this.outputLevel           = outputLevel;
 		this.showMarquardtOptim    = showMarquardtOptim;
 		this.accurate_mode         		= parameters.mode;
@@ -1227,8 +1251,29 @@ public class Transformation
 
 	} /* end doUnidirectionalRegistration */
 
-	public int[] doUnidirectionalRegistration_AutoTune_Resolution(String type) {
-		return doUnidirectionalRegistration_AutoTune_Resolution(null, null, type, false);
+	/**
+	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
+	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices
+	 * @param direction
+	 * @return
+	 */
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(AutoresolutionDirection direction) {
+		return doUnidirectionalRegistration_AutoTune_Resolution(null, null, direction,
+				false, AUTOTUNE_DEFAULT_THRESH);
+	}
+
+	/**
+	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
+	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
+	 * @param sourceMtxInt
+	 * @param targetMtxInt
+	 * @param direction
+	 * @return
+	 */
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt,
+																  AutoresolutionDirection direction) {
+		return doUnidirectionalRegistration_AutoTune_Resolution(sourceMtxInt, targetMtxInt, direction,
+				false, AUTOTUNE_DEFAULT_THRESH);
 	}
 
 	/**
@@ -1238,12 +1283,13 @@ public class Transformation
 	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
 	 * @param sourceMtxInt used to evaluate pixel-wise L2 diff
 	 * @param targetMtxInt used to evaluate pixel-wise L2 diff
-	 * @param type can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
+	 * @param direction AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
 	 * @param usePixelDiff set to true to use pixel-wise L2 error instead of the regular bunwarpJ error function
 	 * @return
 	 */
-	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt, String type,
-																  boolean usePixelDiff) {
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt,
+																  AutoresolutionDirection direction,
+																  boolean usePixelDiff, double sumThreshold) {
 
 		//the range of allowed values for min_scale_deformation is defined in the Param class-
 		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine)
@@ -1256,20 +1302,20 @@ public class Transformation
 		int maxResolutionToUse = this.max_scale_deformation;
 
 		List<int[]> resolutionPairs = new ArrayList<>();
-		switch (type){
-			case "start":
+		switch (direction){
+			case start:
 			{
 				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
 					resolutionPairs.add(new int[]{i,maxResolutionToUse});
 				}
 			} break;
-			case "end":
+			case end:
 			{
 				for (int j = minResolutionToUse; j <= maxResolutionToUse; j++) {
 					resolutionPairs.add(new int[]{minResolutionToUse,j});
 				}
 			} break;
-			case "both":
+			case both:
 			{
 				//try all pairs of minResolutionToUse and maxResolutionToUse
 				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
@@ -1307,15 +1353,10 @@ public class Transformation
 				}
 				double pctDecrease = (originalImageSum - newImageSum)/originalImageSum;
 				pixelSumPctDecrease.add(pctDecrease);
-				if (pctDecrease > imageSumDecreaseThreshold) {
-					errValues.add(Double.MAX_VALUE);
-				} else {
-					double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
-					errValues.add(pixelErr);
-				}
+				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
+				errValues.add(pixelErr);
 
 			} else {
-//				double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
 				double finalErr = this.getFinalDirectSimilarityError();
 				errValues.add(finalErr);
 			}
@@ -1331,7 +1372,7 @@ public class Transformation
 		double minError = Double.MAX_VALUE;
 		int minIdx = -1;
 		for (int i=0; i<errValues.size(); i++) {
-			if (errValues.get(i) < minError) {
+			if ( (errValues.get(i) < minError) && (pixelSumPctDecrease.get(i) <= sumThreshold)) {
 				minError = errValues.get(i);
 				minIdx = i;
 			}

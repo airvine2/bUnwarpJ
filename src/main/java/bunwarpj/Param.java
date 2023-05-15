@@ -50,6 +50,11 @@ import ij.gui.GenericDialog;
  */
 public class Param {
 
+	/**
+	 * default value for property imageSumDecreaseThreshold
+	 */
+	public static final double DEFAULT_OPTIM_IMG_THRESH = 0.7;
+
 	/** mode accuracy mode (0 - Fast, 1 - Accurate, 2 - Mono) */
 	public int mode = 2;
 	/** image subsampling factor (from 0 to 7, representing 2^0=1 to 2^7 = 128) */
@@ -90,17 +95,17 @@ public class Param {
 	private double anisotropyCorrection = 0.0;
 
 	/**
-	 * (used in Transformation optimizeCoeffs and doUnidirectionalRegistration_AutoTune_Resolution)
+	 * (used in Transformation optimizeCoeffs)
 	 * threshold which we use to compare the sum of image pixels in an optimization iteration
-	 * to the initial sum of image pixels. If the current sum of image pixels has decreased
-	 * by a proportion greater than IMAGE_DIFF_THRESHOLD, we set the current optimization error
+	 * to the initial sum of image pixels. If the current sum of the transformed image has decreased
+	 * by a proportion greater than imageSumDecreaseThreshold, the current optimization error is set
 	 * to a very large value to indicate that this solution is not optimal.
 	 * In other words, if the (initial sum of pixels - current sum of pixels)/initial sum of pixels
-	 * > IMAGE_DIFF_THRESHOLD, it means that the optimization is converging to a local minimum error
+	 * > imageSumDecreaseThreshold, it means that the optimization is converging to a local minimum error
 	 * which occurs because the pixels are all being set to very low or 0 values,
 	 * which makes it appear that the error is going down.
 	 */
-	private double imageSumDecreaseThreshold = 0.7;
+	private double optimizationImageDecreaseThresh = DEFAULT_OPTIM_IMG_THRESH;
 	
 	/**
 	 * Empty constructor
@@ -113,8 +118,7 @@ public class Param {
 	public Param(Param otherParam) {
 		this(otherParam.mode, otherParam.img_subsamp_fact, otherParam.min_scale_deformation, otherParam.max_scale_deformation,
 				otherParam.divWeight, otherParam.curlWeight, otherParam.landmarkWeight, otherParam.imageWeight,
-				otherParam.consistencyWeight, otherParam.stopThreshold);
-		this.imageSumDecreaseThreshold = otherParam.imageSumDecreaseThreshold;
+				otherParam.consistencyWeight, otherParam.stopThreshold, otherParam.optimizationImageDecreaseThresh);
 	}
 
 	/**
@@ -140,7 +144,8 @@ public class Param {
 			double  landmarkWeight,
 			double  imageWeight,
 			double  consistencyWeight,
-			double  stopThreshold)
+			double  stopThreshold,
+		    double optimizationImageDecreaseThresh)
 	{
 		this.mode = mode;
 		this.img_subsamp_fact = img_subsamp_fact;
@@ -151,7 +156,8 @@ public class Param {
 		this.landmarkWeight = landmarkWeight;
 		this.imageWeight = imageWeight;
 		this.consistencyWeight = consistencyWeight;
-		this.stopThreshold = stopThreshold;		
+		this.stopThreshold = stopThreshold;
+		this.optimizationImageDecreaseThresh = optimizationImageDecreaseThresh;
 	}
 	
 	/**
@@ -253,11 +259,11 @@ public class Param {
 		return anisotropyCorrection;
 	}
 
-	public double getImageSumDecreaseThreshold() {
-		return imageSumDecreaseThreshold;
+	public double getOptimizationImageDecreaseThresh() {
+		return optimizationImageDecreaseThresh;
 	}
 
-	public void setImageSumDecreaseThreshold(double imageSumDecreaseThreshold) {
-		this.imageSumDecreaseThreshold = imageSumDecreaseThreshold;
+	public void setOptimizationImageDecreaseThresh(double optimizationImageDecreaseThresh) {
+		this.optimizationImageDecreaseThresh = optimizationImageDecreaseThresh;
 	}
 } // end class Param

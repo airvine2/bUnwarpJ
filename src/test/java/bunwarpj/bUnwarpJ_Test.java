@@ -1,6 +1,5 @@
 package bunwarpj;
 
-import ij.IJ;
 import ij.ImagePlus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +11,11 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class bUnwarpJ_Test {
+
+    /**
+     * set to true if we are saving results to file, false if we are checking results against a file
+     */
+    private final boolean OVERWRITE_RESULTS_FILES = false;
 
     private Path resourcePath;
 
@@ -28,9 +32,6 @@ class bUnwarpJ_Test {
      * error is measured by L2 pixel diff between the warped source image and the target image
      */
     void computeTransformation_Autotune_2D() throws Exception{
-
-        //true if we are saving results, false if we are checking results against a file
-        boolean initResults = false;
 
         Path inputFolder = this.resourcePath.resolve("2D-int");
 
@@ -63,7 +64,7 @@ class bUnwarpJ_Test {
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(warp, testContainer.sourceMtxInt);
 
-        if (initResults) {
+        if (OVERWRITE_RESULTS_FILES) {
 
             TestHelper.saveTransformationCoeffs(warp,
                     testContainer.outputFolder, "transformationCoeffs_autotune_Res");
@@ -107,7 +108,7 @@ class bUnwarpJ_Test {
 
         TestContainer testContainer = new TestContainer(inputFolder);
 
-        testContainer.options.setImageSumDecreaseThreshold(0.5);
+        testContainer.options.setOptimizationImageDecreaseThresh(0.5);
 
         //copied code from computeTransformationBatch_Autotune
 
