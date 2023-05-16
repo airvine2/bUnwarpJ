@@ -48,7 +48,6 @@ import ij.WindowManager;
 import ij.io.FileSaver;
 import ij.io.Opener;
 import ij.plugin.PlugIn;
-import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 
 import java.awt.Dialog;
@@ -267,8 +266,8 @@ public class bUnwarpJ_ implements PlugIn
     {
         //gather all parameters into a Parameter object
         Param paramsToUse = new Param(mode, img_subsamp_fact, min_scale_deformation, max_scale_deformation,
-                divWeight, curlWeight, landmarkWeight, imageWeight, consistencyWeight,
-                stopThreshold);
+                divWeight, curlWeight, landmarkWeight, imageWeight, consistencyWeight, stopThreshold,
+                Param.DEFAULT_OPTIM_IMG_THRESH);
 
         return computeTransformationBatch(targetImp, sourceImp, targetMskIP, sourceMskIP, paramsToUse);
     } // end computeTransformationBatch    
@@ -508,13 +507,12 @@ public class bUnwarpJ_ implements PlugIn
                                                        double[][] targetAffineMatrix, double[][] sourceAffineMatrix) {
         // Produce side information
         final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-        final int min_scale_image = 0;
 
         //calculate the BSpline model coefficients for source and target
-        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.setPyramidDepth(imagePyramidDepth);
         target.startPyramids();
 
-        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.setPyramidDepth(imagePyramidDepth);
         source.startPyramids();
 
         // Join threads
@@ -536,15 +534,11 @@ public class bUnwarpJ_ implements PlugIn
 
         final boolean showMarquardtOptim = false;
 
-        final Transformation warp = new Transformation(
+        final Transformation warp = new Transformation(parameter,
                 sourceImp, targetImp, source, target, sourcePh, targetPh,
                 sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-                parameter.min_scale_deformation, parameter.max_scale_deformation,
-                min_scale_image, parameter.divWeight,
-                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
-                parameter.consistencyWeight, parameter.stopThreshold,
-                outputLevel, showMarquardtOptim, parameter.mode,null, null,
-                output_ip[0], output_ip[1], null,
+                outputLevel, showMarquardtOptim, null, null,
+                output_ip[0], output_ip[1],
                 sourceImp.getProcessor(), targetImp.getProcessor());
 
         // Initial affine transform correction values
@@ -581,12 +575,12 @@ public class bUnwarpJ_ implements PlugIn
      * @param targetImageMtx input target image as a matrix of values between 0-255
      * @param sourceImageMtx input source image as a matrix of values between 0-255
      * @param parameter registration parameters
-     * @param autotuneType "both", "start" or "end"
+     * @param direction AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
      *
      * @return results transformation object
      */
     public static Transformation computeTransformationBatch_Autotune(int[][] targetImageMtx, int[][] sourceImageMtx,
-                                                            Param parameter, String autotuneType)
+                                                            Param parameter, Transformation.AutoresolutionDirection direction)
     {
         if(targetImageMtx == null || sourceImageMtx == null || parameter == null)
         {
@@ -608,29 +602,46 @@ public class bUnwarpJ_ implements PlugIn
 
         final Transformation warp =  computeTransformation_Autotune(target, source, parameter, targetImp, sourceImp, targetMsk,
                 sourceMsk, targetPh, sourcePh, null, null, targetImageMtx, sourceImageMtx,
-                autotuneType);
+                direction);
 
         return warp;
     } // end computeTransformationBatch
 
+    /**
+     *
+     * @param target
+     * @param source
+     * @param parameter
+     * @param targetImp
+     * @param sourceImp
+     * @param targetMsk
+     * @param sourceMsk
+     * @param targetPh
+     * @param sourcePh
+     * @param targetAffineMatrix
+     * @param sourceAffineMatrix
+     * @param targetImageMtx
+     * @param sourceImageMtx
+     * @param autotuneType AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
+     * @return
+     */
     public static Transformation computeTransformation_Autotune(BSplineModel target, BSplineModel source, Param parameter,
                                                        ImagePlus targetImp, ImagePlus sourceImp,
                                                        Mask targetMsk, Mask sourceMsk,
                                                        PointHandler targetPh, PointHandler sourcePh,
                                                        double[][] targetAffineMatrix, double[][] sourceAffineMatrix,
-                                                        int[][] targetImageMtx, int[][] sourceImageMtx,
-                                                                String autotuneType) {
+                                                       int[][] targetImageMtx, int[][] sourceImageMtx,
+                                                       Transformation.AutoresolutionDirection autotuneType) {
         // Produce side information
         parameter.min_scale_deformation = 0;
         parameter.max_scale_deformation = 4;
         final int imagePyramidDepth = parameter.max_scale_deformation - parameter.min_scale_deformation + 1;
-        final int min_scale_image = 0;
 
         //calculate the BSpline model coefficients for source and target
-        target.setPyramidDepth(imagePyramidDepth+min_scale_image);
+        target.setPyramidDepth(imagePyramidDepth);
         target.startPyramids();
 
-        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
+        source.setPyramidDepth(imagePyramidDepth);
         source.startPyramids();
 
         // Join threads
@@ -652,15 +663,11 @@ public class bUnwarpJ_ implements PlugIn
 
         final boolean showMarquardtOptim = false;
 
-        final Transformation warp = new Transformation(
+        final Transformation warp = new Transformation(parameter,
                 sourceImp, targetImp, source, target, sourcePh, targetPh,
                 sourceMsk, targetMsk, sourceAffineMatrix, targetAffineMatrix,
-                parameter.min_scale_deformation, parameter.max_scale_deformation,
-                min_scale_image, parameter.divWeight,
-                parameter.curlWeight, parameter.landmarkWeight, parameter.imageWeight,
-                parameter.consistencyWeight, parameter.stopThreshold,
-                outputLevel, showMarquardtOptim, parameter.mode,null, null,
-                output_ip[0], output_ip[1], null,
+                outputLevel, showMarquardtOptim, null, null,
+                output_ip[0], output_ip[1],
                 sourceImp.getProcessor(), targetImp.getProcessor());
 
         // Initial affine transform correction values
@@ -675,11 +682,10 @@ public class bUnwarpJ_ implements PlugIn
         long start = System.currentTimeMillis(); // start timing
 
         if(parameter.mode == MainDialog.MONO_MODE) {
-            warp.doUnidirectionalRegistration_AutoTune_Resolution(sourceImageMtx, targetImageMtx, autotuneType,
-                    true);
-        }
-        else
+            warp.doUnidirectionalRegistration_AutoTune_Resolution(sourceImageMtx, targetImageMtx, autotuneType);
+        } else {
             warp.doBidirectionalRegistration();
+        }
 
         long stop = System.currentTimeMillis(); // stop timing
         IJ.log("bUnwarpJ is done! Registration time: " + (stop - start) + "ms"); // print execution time

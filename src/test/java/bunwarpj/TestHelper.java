@@ -1,6 +1,5 @@
 package bunwarpj;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.io.FileSaver;
 import ij.process.ByteProcessor;
@@ -200,8 +199,8 @@ public class TestHelper {
     public static void saveTransformationCoeffs(Transformation tResult, String outputFolder, String outputFileName) {
         double[][] cx = tResult.getDirectDeformationCoefficientsX();
         double[][] cy = tResult.getDirectDeformationCoefficientsY();
-        TestHelper.saveArrayCSV(cx, outputFolder, outputFileName + "_X.csv");
-        TestHelper.saveArrayCSV(cy, outputFolder, outputFileName + "_Y.csv");
+        TestHelper.saveArrayCSV(cx, outputFolder, outputFileName + "_X");
+        TestHelper.saveArrayCSV(cy, outputFolder, outputFileName + "_Y");
     }
 
     public static void compareTransformationCoeffsToFile(Transformation tResult, String outputFolder,
@@ -245,7 +244,7 @@ public class TestHelper {
 
     public static void saveArrayCSV(double[][] aData, String aFolder, String aFileName) {
         try {
-            String filePath = Paths.get(aFolder, aFileName).toString();
+            String filePath = Paths.get(aFolder, aFileName + ".csv").toString();
             FileWriter csvWriter = new FileWriter(filePath);
 
             for (int i=0; i < aData.length; i++) {
@@ -269,7 +268,7 @@ public class TestHelper {
 
     public static void saveArrayCSV(int[][] aData, String aFolder, String aFileName) {
         try {
-            String filePath = Paths.get(aFolder, aFileName).toString();
+            String filePath = Paths.get(aFolder, aFileName + ".csv").toString();
             FileWriter csvWriter = new FileWriter(filePath);
 
             for (int i=0; i < aData.length; i++) {
@@ -292,7 +291,7 @@ public class TestHelper {
 
     public static void saveArrayCSV(double[] aData, String aFolder, String aFileName, boolean saveAsColumn) {
         try {
-            String filePath = Paths.get(aFolder, aFileName).toString();
+            String filePath = Paths.get(aFolder, aFileName + ".csv").toString();
             FileWriter csvWriter = new FileWriter(filePath);
 
             String delimiter;
@@ -316,7 +315,7 @@ public class TestHelper {
 
     public static void saveArrayCSV(int[] aData, String aFolder, String aFileName, boolean saveAsColumn) {
         try {
-            String filePath = Paths.get(aFolder, aFileName).toString();
+            String filePath = Paths.get(aFolder, aFileName + ".csv").toString();
             FileWriter csvWriter = new FileWriter(filePath);
 
             String delimiter;
@@ -340,7 +339,7 @@ public class TestHelper {
 
     public static void saveArrayCSV(List<double[]> aData, String aFilePath) {
         try {
-            FileWriter csvWriter = new FileWriter(aFilePath);
+            FileWriter csvWriter = new FileWriter(aFilePath + ".csv");
 
             for (int i=0; i < aData.size(); i++) {
                 for (int j=0; j < aData.get(i).length; j++) {
@@ -436,6 +435,65 @@ public class TestHelper {
         Method method = objectClass.getDeclaredMethod(methodName, argClasses);
         method.setAccessible(true);
         method.invoke(object, argObjects);
+    }
+
+    /**
+     * utility function for checking the results of a transformation by
+     * comparing coefficients against a file or generating a new file
+     */
+    public static void compareOrSaveTransform(Transformation warp, String outputFolder, String coeffsFile,
+                                        boolean overwriteFile) throws Exception {
+        if (overwriteFile) {
+            TestHelper.saveTransformationCoeffs(warp, outputFolder, coeffsFile);
+        } else {
+            TestHelper.compareTransformationCoeffsToFile(warp, outputFolder, coeffsFile);
+        }
+    }
+
+    /**
+     * utility function for checking a matrix by
+     * comparing values against a file or generating a new file
+     */
+    public static void compareOrSaveMtx(int[][] mtx, String outputFolder, String resultsFile,
+                                        boolean overwriteFile) throws Exception {
+        if (overwriteFile) {
+            TestHelper.saveMtxAsPng(mtx, outputFolder, resultsFile);
+            TestHelper.saveArrayCSV(mtx, outputFolder, resultsFile);
+        } else {
+            int[][] expectedMtx = TestHelper.import_CsvToMtxInt(
+                    Paths.get(outputFolder, resultsFile + ".csv").toString());
+            assertTrue(Arrays.deepEquals(mtx, expectedMtx));
+        }
+    }
+
+    /**
+     * utility function for checking a matrix by
+     * comparing values against a file or generating a new file
+     */
+    public static void compareOrSaveMtx(double[][] mtx, String outputFolder, String resultsFile,
+                                        boolean overwriteFile) throws Exception {
+        if (overwriteFile) {
+            TestHelper.saveArrayCSV(mtx, outputFolder, resultsFile);
+        } else {
+            double[][] expectedMtx = TestHelper.import_CsvToMtxDouble(
+                    Paths.get(outputFolder, resultsFile + ".csv").toString());
+            assertTrue(Arrays.deepEquals(mtx, expectedMtx));
+        }
+    }
+
+    /**
+     * utility function for checking an image matrix by
+     * comparing values against a file or generating a new file
+     */
+    public static void compareOrSaveArray(double[] array, String outputFolder, String resultsFile,
+                                        boolean overwriteFile) throws Exception {
+        if (overwriteFile) {
+            TestHelper.saveArrayCSV(array, outputFolder, resultsFile, false);
+        } else {
+            double[] expectedArray = TestHelper.import_CsvToMtxDouble(
+                    Paths.get(outputFolder, resultsFile + ".csv").toString())[0];
+            assertTrue(Arrays.equals(array, expectedArray));
+        }
     }
 
 }

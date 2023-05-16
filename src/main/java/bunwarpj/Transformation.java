@@ -79,6 +79,7 @@ public class Transformation
        Private variables
     ....................................................................*/
 
+
 	/** float epsilon */
 	private final double FLT_EPSILON = (double)Float.intBitsToFloat((int)0x33FFFFFF);
 	/** pyramid flag to indicate the image information is taken from the pyramid */
@@ -87,6 +88,30 @@ public class Transformation
 	private final boolean ORIGINAL = false;
 	/** degree of the B-splines involved in the transformation */
 	private final int transformationSplineDegree = 3;
+	/**
+	 * (used in Transformation doUnidirectionalRegistration_AutoTune_Resolution, default value)
+	 * threshold which we use to compare the sum of image pixels
+	 * to the initial sum of image pixels when trying to automatically determine
+	 * the optimal minDeformation and maxDeformation value pair in doUnidirectionalRegistration_AutoTune_Resolution.
+	 * If the current sum of transformed image pixels has decreased
+	 * by a proportion greater than autotuneImageSumThreshold, the
+	 * minDeformation and maxDeformation value pair which resulted in that transformation will not be returned
+	 * as the optimal settings
+	 */
+	public static final double AUTOTUNE_DEFAULT_THRESH = 0.5;
+
+	/**
+	 * input param used in doUnidirectionalRegistration_AutoTune_Resolution to specify which parameter
+	 * of the resolution (min or max) to autotune
+	 * start - only tune min resolution
+	 * end - only tune max resolution
+	 * both - tune min and max resolution
+	 */
+	public enum AutoresolutionDirection {
+		start,
+		end,
+		both
+	}
 
 	// Some useful references
 	/** reference to the first output image */
@@ -235,6 +260,18 @@ public class Transformation
 	private String  fn_tnf_1;
 	/** inverse transformation file name */
 	private String  fn_tnf_2;
+	/**
+	 * (used in Transformation optimizeCoeffs)
+	 * threshold which we use to compare the sum of image pixels in an optimization iteration
+	 * to the initial sum of image pixels. If the current sum of the transformed image has decreased
+	 * by a proportion greater than imageSumDecreaseThreshold, the current optimization error is set
+	 * to a very large value to indicate that this solution is not optimal.
+	 * In other words, if the (initial sum of pixels - current sum of pixels)/initial sum of pixels
+	 * > imageSumDecreaseThreshold, it means that the optimization is converging to a local minimum error
+	 * which occurs because the pixels are all being set to very low or 0 values,
+	 * which makes it appear that the error is going down.
+	 */
+	private double imageSumDecreaseThreshold = 0.7;
 
 	// Transformation estimate
 	/** number of intervals to place B-spline coefficients */
@@ -477,7 +514,89 @@ public class Transformation
 		this.targetWidth           = target.getWidth();
 		this.targetHeight          = target.getHeight();
 	} // end Transformation
-	
+
+	//------------------------------------------------------------------
+
+	/**
+	 *
+	 * @param parameters
+	 * @param sourceImp
+	 * @param targetImp
+	 * @param source
+	 * @param target
+	 * @param sourcePh
+	 * @param targetPh
+	 * @param sourceMsk
+	 * @param targetMsk
+	 * @param sourceAffineMatrix
+	 * @param targetAffineMatrix
+	 * @param outputLevel
+	 * @param showMarquardtOptim
+	 * @param fn_tnf_1
+	 * @param fn_tnf_2
+	 * @param output_ip_1
+	 * @param output_ip_2
+	 * @param originalSourceIP
+	 * @param originalTargetIP
+	 */
+	public Transformation (
+			Param parameters,
+			final ImagePlus sourceImp,
+			final ImagePlus targetImp,
+			final BSplineModel source,
+			final BSplineModel target,
+			final PointHandler sourcePh,
+			final PointHandler targetPh,
+			final Mask sourceMsk,
+			final Mask targetMsk,
+			final double[][] sourceAffineMatrix,
+			final double[][] targetAffineMatrix,
+			final int outputLevel,
+			final boolean showMarquardtOptim,
+			final String fn_tnf_1,
+			final String fn_tnf_2,
+			final ImagePlus output_ip_1,
+			final ImagePlus output_ip_2,
+			final ImageProcessor originalSourceIP,
+			final ImageProcessor originalTargetIP)
+	{
+		this.sourceImp	      = sourceImp;
+		this.targetImp	      = targetImp;
+		this.source                = source;
+		this.target                = target;
+		this.sourcePh              = sourcePh;
+		this.targetPh              = targetPh;
+		this.sourceMsk             = sourceMsk;
+		this.targetMsk             = targetMsk;
+		this.sourceAffineMatrix    = sourceAffineMatrix;
+		this.targetAffineMatrix    = targetAffineMatrix;
+		this.min_scale_deformation = parameters.min_scale_deformation;
+		this.max_scale_deformation = parameters.max_scale_deformation;
+		this.min_scale_image       = 0;
+		this.divWeight             = parameters.divWeight;
+		this.curlWeight            = parameters.curlWeight;
+		this.landmarkWeight        = parameters.landmarkWeight;
+		this.imageWeight           = parameters.imageWeight;
+		this.consistencyWeight     = parameters.consistencyWeight;
+		this.stopThreshold         = parameters.stopThreshold;
+		this.imageSumDecreaseThreshold = parameters.getOptimizationImageDecreaseThresh();
+		this.outputLevel           = outputLevel;
+		this.showMarquardtOptim    = showMarquardtOptim;
+		this.accurate_mode         		= parameters.mode;
+		this.fn_tnf_1              		= fn_tnf_1;
+		this.fn_tnf_2              		= fn_tnf_2;
+		this.output_ip_1           		= output_ip_1;
+		this.output_ip_2           		= output_ip_2;
+
+		this.originalSourceIP	  = originalSourceIP;
+		this.originalTargetIP	  = originalTargetIP;
+
+		this.sourceWidth           = source.getWidth();
+		this.sourceHeight          = source.getHeight();
+		this.targetWidth           = target.getWidth();
+		this.targetHeight          = target.getHeight();
+	} // end Transformation
+
 	//------------------------------------------------------------------
 	/**
 	 * Registration method. It applies the consistent and elastic registration
@@ -1132,8 +1251,18 @@ public class Transformation
 
 	} /* end doUnidirectionalRegistration */
 
-	public int[] doUnidirectionalRegistration_AutoTune_Resolution(String type) {
-		return doUnidirectionalRegistration_AutoTune_Resolution(null, null, type, false);
+	/**
+	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
+	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
+	 * @param sourceMtxInt
+	 * @param targetMtxInt
+	 * @param direction
+	 * @return
+	 */
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt,
+																  AutoresolutionDirection direction) {
+		return doUnidirectionalRegistration_AutoTune_Resolution(sourceMtxInt, targetMtxInt, direction,
+				false, AUTOTUNE_DEFAULT_THRESH);
 	}
 
 	/**
@@ -1143,12 +1272,13 @@ public class Transformation
 	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
 	 * @param sourceMtxInt used to evaluate pixel-wise L2 diff
 	 * @param targetMtxInt used to evaluate pixel-wise L2 diff
-	 * @param type can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
+	 * @param direction AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
 	 * @param usePixelDiff set to true to use pixel-wise L2 error instead of the regular bunwarpJ error function
 	 * @return
 	 */
-	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt, String type,
-																  boolean usePixelDiff) {
+	public int[] doUnidirectionalRegistration_AutoTune_Resolution(int[][] sourceMtxInt, int[][] targetMtxInt,
+																  AutoresolutionDirection direction,
+																  boolean usePixelDiff, double sumThreshold) {
 
 		//the range of allowed values for min_scale_deformation is defined in the Param class-
 		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine)
@@ -1161,20 +1291,20 @@ public class Transformation
 		int maxResolutionToUse = this.max_scale_deformation;
 
 		List<int[]> resolutionPairs = new ArrayList<>();
-		switch (type){
-			case "start":
+		switch (direction){
+			case start:
 			{
 				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
 					resolutionPairs.add(new int[]{i,maxResolutionToUse});
 				}
 			} break;
-			case "end":
+			case end:
 			{
 				for (int j = minResolutionToUse; j <= maxResolutionToUse; j++) {
 					resolutionPairs.add(new int[]{minResolutionToUse,j});
 				}
 			} break;
-			case "both":
+			case both:
 			{
 				//try all pairs of minResolutionToUse and maxResolutionToUse
 				for (int i = minResolutionToUse; i < maxResolutionToUse; i++) {
@@ -1187,6 +1317,7 @@ public class Transformation
 
 		// store results for each resolution setting that we test, and at the end keep the best results.
 		List<Double> errValues = new ArrayList<>();
+		List<Double> pixelSumPctDecrease = new ArrayList<>();
 		List<double[][]> cxCoeffs = new ArrayList<>();
 		List<double[][]> cyCoeffs = new ArrayList<>();
 		List<List<Double>> optimErrs = new ArrayList<>();
@@ -1198,15 +1329,28 @@ public class Transformation
 
 			doUnidirectionalRegistration(curPair[0], curPair[1]);
 
+			int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
+
 			if (usePixelDiff) {
-				int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
 				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
 				errValues.add(pixelErr);
+
 			} else {
-//				double finalErr = this.getOptimizationErrorValues().get(this.getOptimizationErrorValues().size()-2);
 				double finalErr = this.getFinalDirectSimilarityError();
 				errValues.add(finalErr);
 			}
+
+			//check if the sum of pixels has decreased
+			double originalImageSum, newImageSum;
+			if (!source.is2D()) {
+				originalImageSum = Arrays.stream(sourceMtxInt[0]).sum();
+				newImageSum = Arrays.stream(warpedImageMtx[0]).sum();
+			} else {
+				originalImageSum = getMatrixSum(sourceMtxInt);
+				newImageSum = getMatrixSum(warpedImageMtx);
+			}
+			double pctDecrease = (originalImageSum - newImageSum)/originalImageSum;
+			pixelSumPctDecrease.add(pctDecrease);
 
 			cxCoeffs.add(this.cxTargetToSource);
 			cyCoeffs.add(this.cyTargetToSource);
@@ -1219,7 +1363,7 @@ public class Transformation
 		double minError = Double.MAX_VALUE;
 		int minIdx = -1;
 		for (int i=0; i<errValues.size(); i++) {
-			if (errValues.get(i) < minError) {
+			if ( (errValues.get(i) < minError) && (pixelSumPctDecrease.get(i) <= sumThreshold)) {
 				minError = errValues.get(i);
 				minIdx = i;
 			}
@@ -1234,6 +1378,14 @@ public class Transformation
 		this.max_scale_deformation = resolutionPairs.get(minIdx)[1];
 
 		return resolutionPairs.get(minIdx);
+	}
+
+	private int getMatrixSum(int[][] mtx) {
+		int result = 0;
+		for (int i=0; i<mtx.length; i++) {
+			result += Arrays.stream(mtx[i]).sum();
+		}
+		return result;
 	}
 
 	public double doUnidirectionalRegistration_AutoTune_Weights(int[][] sourceMtxInt, int[][] targetMtxInt,
@@ -5043,7 +5195,7 @@ public class Transformation
 
 			//check for large decrease in pixels sum, for the case where the transformation zeros out the image
 			double sourcePixelSumDiff = imagesSumPixels_initial[0] - imagesSumPixels_current[0];
-			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > 0.7) {
+			if ((sourcePixelSumDiff/imagesSumPixels_initial[0]) > imageSumDecreaseThreshold) {
 				f = 1.0/FLT_EPSILON;
 			}
 
@@ -7848,4 +8000,11 @@ public class Transformation
 		return finalDirectConsistencyError;
 	}
 
+	public double getImageSumDecreaseThreshold() {
+		return imageSumDecreaseThreshold;
+	}
+
+	public void setImageSumDecreaseThreshold(double imageSumDecreaseThreshold) {
+		this.imageSumDecreaseThreshold = imageSumDecreaseThreshold;
+	}
 } // end class Transformation

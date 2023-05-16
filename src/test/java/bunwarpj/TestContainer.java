@@ -53,7 +53,8 @@ public class TestContainer {
 
     public TestContainer() throws IOException {
         this.options = new Param(2, 0, 0, 1,
-                0.1, 0.1, 0, 1, 10, 0.01);
+                0.1, 0.1, 0, 1, 10, 0.01,
+                0.7);
     }
 
     public TestContainer(String dataFolder) throws IOException {
