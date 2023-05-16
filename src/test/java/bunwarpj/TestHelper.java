@@ -199,8 +199,8 @@ public class TestHelper {
     public static void saveTransformationCoeffs(Transformation tResult, String outputFolder, String outputFileName) {
         double[][] cx = tResult.getDirectDeformationCoefficientsX();
         double[][] cy = tResult.getDirectDeformationCoefficientsY();
-        TestHelper.saveArrayCSV(cx, outputFolder, outputFileName + "_X.csv");
-        TestHelper.saveArrayCSV(cy, outputFolder, outputFileName + "_Y.csv");
+        TestHelper.saveArrayCSV(cx, outputFolder, outputFileName + "_X");
+        TestHelper.saveArrayCSV(cy, outputFolder, outputFileName + "_Y");
     }
 
     public static void compareTransformationCoeffsToFile(Transformation tResult, String outputFolder,

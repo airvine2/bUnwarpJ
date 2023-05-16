@@ -56,7 +56,8 @@ class bUnwarpJ_Test {
                 bUnwarpJ_.computeTransformation_Autotune(target, source, testContainer.options,
                         targetImp, sourceImp, targetMsk, sourceMsk,
                         targetPh, sourcePh, null, null,
-                        testContainer.targetMtxInt, testContainer.sourceMtxInt, "both");
+                        testContainer.targetMtxInt, testContainer.sourceMtxInt,
+                        Transformation.AutoresolutionDirection.both);
 
 
         int[] resolutionsUsed = new int[] {warp.getMin_scale_deformation(), warp.getMax_scale_deformation()};
@@ -129,7 +130,8 @@ class bUnwarpJ_Test {
                 bUnwarpJ_.computeTransformation_Autotune(target, source, testContainer.options,
                         targetImp, sourceImp, targetMsk, sourceMsk,
                         targetPh, sourcePh, null, null,
-                        testContainer.targetMtxInt, testContainer.sourceMtxInt, "both");
+                        testContainer.targetMtxInt, testContainer.sourceMtxInt,
+                        Transformation.AutoresolutionDirection.both);
 
 
 //        int[][] trainImgMtx = AAGTestUtils.import_CsvToMtxInt(this.resourcePath.resolve(trainFileName).toString());

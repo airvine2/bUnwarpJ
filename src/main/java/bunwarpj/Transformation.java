@@ -1253,17 +1253,6 @@ public class Transformation
 
 	/**
 	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
-	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices
-	 * @param direction
-	 * @return
-	 */
-	public int[] doUnidirectionalRegistration_AutoTune_Resolution(AutoresolutionDirection direction) {
-		return doUnidirectionalRegistration_AutoTune_Resolution(null, null, direction,
-				false, AUTOTUNE_DEFAULT_THRESH);
-	}
-
-	/**
-	 * This automatically finds the best minimum and maximum resolution to use, based on the error function value.
 	 * At the end the min and max resolution of the transformation object will be updated to the auto-tuned choices.
 	 * @param sourceMtxInt
 	 * @param targetMtxInt
@@ -1340,19 +1329,9 @@ public class Transformation
 
 			doUnidirectionalRegistration(curPair[0], curPair[1]);
 
-			if (usePixelDiff) {
-				int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
+			int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(this, sourceMtxInt);
 
-				double originalImageSum, newImageSum;
-				if (!source.is2D()) {
-					originalImageSum = Arrays.stream(sourceMtxInt[0]).sum();
-					newImageSum = Arrays.stream(warpedImageMtx[0]).sum();
-				} else {
-					originalImageSum = getMatrixSum(sourceMtxInt);
-					newImageSum = getMatrixSum(warpedImageMtx);
-				}
-				double pctDecrease = (originalImageSum - newImageSum)/originalImageSum;
-				pixelSumPctDecrease.add(pctDecrease);
+			if (usePixelDiff) {
 				double pixelErr = calcPixelDiff(warpedImageMtx, targetMtxInt);
 				errValues.add(pixelErr);
 
@@ -1360,6 +1339,18 @@ public class Transformation
 				double finalErr = this.getFinalDirectSimilarityError();
 				errValues.add(finalErr);
 			}
+
+			//check if the sum of pixels has decreased
+			double originalImageSum, newImageSum;
+			if (!source.is2D()) {
+				originalImageSum = Arrays.stream(sourceMtxInt[0]).sum();
+				newImageSum = Arrays.stream(warpedImageMtx[0]).sum();
+			} else {
+				originalImageSum = getMatrixSum(sourceMtxInt);
+				newImageSum = getMatrixSum(warpedImageMtx);
+			}
+			double pctDecrease = (originalImageSum - newImageSum)/originalImageSum;
+			pixelSumPctDecrease.add(pctDecrease);
 
 			cxCoeffs.add(this.cxTargetToSource);
 			cyCoeffs.add(this.cyTargetToSource);

@@ -575,12 +575,12 @@ public class bUnwarpJ_ implements PlugIn
      * @param targetImageMtx input target image as a matrix of values between 0-255
      * @param sourceImageMtx input source image as a matrix of values between 0-255
      * @param parameter registration parameters
-     * @param autotuneType "both", "start" or "end"
+     * @param direction AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
      *
      * @return results transformation object
      */
     public static Transformation computeTransformationBatch_Autotune(int[][] targetImageMtx, int[][] sourceImageMtx,
-                                                            Param parameter, String autotuneType)
+                                                            Param parameter, Transformation.AutoresolutionDirection direction)
     {
         if(targetImageMtx == null || sourceImageMtx == null || parameter == null)
         {
@@ -602,11 +602,29 @@ public class bUnwarpJ_ implements PlugIn
 
         final Transformation warp =  computeTransformation_Autotune(target, source, parameter, targetImp, sourceImp, targetMsk,
                 sourceMsk, targetPh, sourcePh, null, null, targetImageMtx, sourceImageMtx,
-                autotuneType);
+                direction);
 
         return warp;
     } // end computeTransformationBatch
 
+    /**
+     *
+     * @param target
+     * @param source
+     * @param parameter
+     * @param targetImp
+     * @param sourceImp
+     * @param targetMsk
+     * @param sourceMsk
+     * @param targetPh
+     * @param sourcePh
+     * @param targetAffineMatrix
+     * @param sourceAffineMatrix
+     * @param targetImageMtx
+     * @param sourceImageMtx
+     * @param autotuneType AutoresolutionDirection enum, can be either "start", "end", or "both" to say if we will auto-choose min resolution, max resolution, or both
+     * @return
+     */
     public static Transformation computeTransformation_Autotune(BSplineModel target, BSplineModel source, Param parameter,
                                                        ImagePlus targetImp, ImagePlus sourceImp,
                                                        Mask targetMsk, Mask sourceMsk,
