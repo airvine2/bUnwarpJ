@@ -210,11 +210,20 @@ public class TestHelper {
 
         double[][] expectedcx = TestHelper.import_CsvToMtxDouble(
                 Paths.get(outputFolder, outputFileName + "_X.csv").toString());
-        assertTrue(Arrays.deepEquals(expectedcx, cx));
+
+        if (!Arrays.deepEquals(expectedcx, cx)) {
+            String errMsg = "Expected Transformation Mtx X:\n" + mtxToString(expectedcx) +
+                    "Actual Transformation Mtx X:\n" + mtxToString(cx);
+            assertTrue(false, errMsg);
+        }
 
         double[][] expectedcy = TestHelper.import_CsvToMtxDouble(
                 Paths.get(outputFolder, outputFileName + "_Y.csv").toString());
-        assertTrue(Arrays.deepEquals(expectedcy, cy));
+        if (!Arrays.deepEquals(expectedcy, cy)) {
+            String errMsg = "Expected Transformation Mtx Y:\n" + mtxToString(expectedcy) +
+                    "Actual Transformation Mtx Y:\n" + mtxToString(cy);
+            assertTrue(false, errMsg);
+        }
     }
 
     public static ImagePlus createBWImagePlusFromMtx(int[][] aGrayLevelsMtx) {
@@ -494,6 +503,21 @@ public class TestHelper {
                     Paths.get(outputFolder, resultsFile + ".csv").toString())[0];
             assertTrue(Arrays.equals(array, expectedArray));
         }
+    }
+
+    private static String mtxToString(double[][] aMtx) {
+        String result = "";
+        for (int i=0; i < aMtx.length; i++) {
+            for (int j=0; j < aMtx[i].length; j++) {
+                if (j>0) {
+                    result += ",";
+                }
+                result += String.valueOf(aMtx[i][j]);
+
+            }
+            result += "\n";
+        }
+        return result;
     }
 
 }

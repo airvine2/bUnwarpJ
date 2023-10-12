@@ -959,6 +959,30 @@ class TransformationTest {
 
     }
 
+    @Test
+    /**
+     * testing the results of a transformation which are known to generate small numerical differences between machines
+     */
+    void computeTransformationBatch_2d_inconsistentResultsBug() throws Exception {
+
+        Path inputFolder = this.resourcePath.resolve("2D-inconsistentResultsBug");
+        TestContainer testContainer = new TestContainer(inputFolder.toString());
+
+        testContainer.options.divWeight = 0.2;
+        testContainer.options.curlWeight = 0.4;
+        testContainer.options.min_scale_deformation = 0;
+        testContainer.options.max_scale_deformation = 2;
+
+        testContainer.initializeTransformationInputs_Int();
+        testContainer.buildBSplineModels();
+        testContainer.initializeTransformationObject();
+
+        testContainer.warp.doUnidirectionalRegistration();
+
+        TestHelper.compareOrSaveTransform(testContainer.warp, testContainer.outputFolder,
+                "transform", OVERWRITE_RESULTS_FILES);
+    }
+
 
 
 }
