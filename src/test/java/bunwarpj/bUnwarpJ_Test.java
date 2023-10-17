@@ -74,14 +74,14 @@ class bUnwarpJ_Test {
                     testContainer.outputFolder, "warped-source_autotune_Res");
 
             TestHelper.saveArrayCSV(warpedImageMtx,
-                    testContainer.outputFolder, "warped-source_autotune_Res.csv");
+                    testContainer.outputFolder, "warped-source_autotune_Res");
 
         } else {
 
             int[] expectedResolutions = new int[] {1,4};
             assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
 
-            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+            TestHelper.compareTransformationCoeffsToFile(warp,
                     testContainer.outputFolder, "transformationCoeffs_autotune_Res");
 
             int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(
@@ -181,9 +181,6 @@ class bUnwarpJ_Test {
      */
     void computeTransformation_AutotuneVSRegular_2D() throws Exception{
 
-        //true if we are saving results, false if we are checking results against a file
-        boolean initResults = false;
-
         Path inputFolder = this.resourcePath.resolve("2D-int");
 
         TestContainer testContainer = new TestContainer(inputFolder.toString());
@@ -214,7 +211,7 @@ class bUnwarpJ_Test {
         //apply transformation to source image
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(warp, testContainer.sourceMtxInt);
 
-        if (initResults) {
+        if (OVERWRITE_RESULTS_FILES) {
 
             TestHelper.saveTransformationCoeffs(warp,
                     testContainer.outputFolder, "transformationCoeffs_autotune_Res");
@@ -223,14 +220,14 @@ class bUnwarpJ_Test {
                     testContainer.outputFolder, "warped-source_autotune_Res");
 
             TestHelper.saveArrayCSV(warpedImageMtx,
-                    testContainer.outputFolder, "warped-source_autotune_Res.csv");
+                    testContainer.outputFolder, "warped-source_autotune_Res");
 
         } else {
 
             int[] expectedResolutions = new int[] {1,4};
             assertTrue(Arrays.equals(expectedResolutions, resolutionsUsed));
 
-            TestHelper.compareTransformationCoeffsToFile(testContainer.warp,
+            TestHelper.compareTransformationCoeffsToFile(warp,
                     testContainer.outputFolder, "transformationCoeffs_autotune_Res");
 
             int[][] expectedWarpedImageMtx = TestHelper.import_CsvToMtxInt(

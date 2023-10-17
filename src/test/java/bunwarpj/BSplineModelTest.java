@@ -3,6 +3,7 @@ package bunwarpj;
 import ij.IJ;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,10 +14,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BSplineModelTest {
 
+    /**
+     * set to true if we are saving results to file, false if we are checking results against a file
+     */
+    private final boolean OVERWRITE_RESULTS_FILES = false;
+    private Path resourcePath;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        this.resourcePath = Paths.get("", TestHelper.RESOURCES_DIR);
+    }
+
     @Test
-    void run() throws Exception {
-        TestContainer testContainer = new TestContainer();
-        testContainer.loadUnscaledFloatCsvData("C:\\images-as-csv\\1D data", "train.csv", "target.csv");
+    void buildBSplineModel() throws Exception {
+
+        Path inputFolder = this.resourcePath.resolve("test data_1D_BsplineModel");
+
+        TestContainer testContainer = new TestContainer(inputFolder.toString());
+
+        testContainer.loadUnscaledFloatCsvData(inputFolder.toString(), "source.csv", "target.csv");
 
         BSplineModel bsModel = new BSplineModel(testContainer.sourceMtxFloat, true);
 
@@ -31,20 +47,22 @@ class BSplineModelTest {
         // Join threads
         bsModel.getThread().join();
 
-        //write out coeffs at every level of pyramid
-//        savePyramidArrays(bsModel.getCpyramid(), testContainer.outputFolder, "coefficientsPyramid.csv");
-//        savePyramidArrays(bsModel.getImgpyramid(), testContainer.outputFolder, "imagePyramid.csv");
+        if (OVERWRITE_RESULTS_FILES) {
+            //write out coeffs at every level of pyramid
+            savePyramidArrays(bsModel.getCpyramid(), testContainer.outputFolder, "coefficientsPyramid");
+            savePyramidArrays(bsModel.getImgpyramid(), testContainer.outputFolder, "imagePyramid");
+        } else {
+            //check coeffs
+            List<double[]> expectedCoeffs = TestHelper.import_CsvToList(Paths.get(testContainer.outputFolder,
+                    "coefficientsPyramid.csv").toString());
+            List<double[]> actualCoeffs = getPyramidArrays(bsModel.getCpyramid());
+            assertTrue(TestHelper.compareListOfArrays(expectedCoeffs, actualCoeffs));
 
-        //check coeffs
-        List<double[]> expectedCoeffs = TestHelper.import_CsvToList(Paths.get(testContainer.outputFolder,
-                "coefficientsPyramid.csv").toString());
-        List<double[]> actualCoeffs = getPyramidArrays(bsModel.getCpyramid());
-        assertTrue(TestHelper.compareListOfArrays(expectedCoeffs, actualCoeffs));
-
-        List<double[]> expectedImagePyramid = TestHelper.import_CsvToList(Paths.get(testContainer.outputFolder,
-                "imagePyramid.csv").toString());
-        List<double[]> actualImagePyramid = getPyramidArrays(bsModel.getImgpyramid());
-        assertTrue(TestHelper.compareListOfArrays(expectedImagePyramid, actualImagePyramid));
+            List<double[]> expectedImagePyramid = TestHelper.import_CsvToList(Paths.get(testContainer.outputFolder,
+                    "imagePyramid.csv").toString());
+            List<double[]> actualImagePyramid = getPyramidArrays(bsModel.getImgpyramid());
+            assertTrue(TestHelper.compareListOfArrays(expectedImagePyramid, actualImagePyramid));
+        }
 
     }
 
