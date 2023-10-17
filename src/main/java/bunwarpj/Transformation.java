@@ -5872,7 +5872,8 @@ public class Transformation
 			}
 
 			// Check the number of processors in the computer 
-			int nproc = Runtime.getRuntime().availableProcessors();
+//			int nproc = Runtime.getRuntime().availableProcessors();
+			int nproc = MiscTools.NUM_PROCESSORS_TO_USE;
 
 			// We will use threads to display parts of the output image
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
@@ -5968,7 +5969,8 @@ public class Transformation
 			ColorProcessor cp_mask	= new ColorProcessor(auxTargetWidth, auxTargetHeight);			
 			
 			// Check the number of processors in the computer 
-			int nproc = Runtime.getRuntime().availableProcessors();
+//			int nproc = Runtime.getRuntime().availableProcessors();
+			int nproc = MiscTools.NUM_PROCESSORS_TO_USE;
 
 			// We will use threads to display parts of the output image
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
@@ -6688,7 +6690,8 @@ public class Transformation
 		int uv = 0;
 
 		// Check the number of processors in the computer 
-		int nproc = Runtime.getRuntime().availableProcessors();
+//		int nproc = Runtime.getRuntime().availableProcessors();
+		int nproc = MiscTools.NUM_PROCESSORS_TO_USE;
 
 		// We will use threads to display parts of the output image
 
@@ -7133,7 +7136,8 @@ public class Transformation
 		if(imageWeight != 0)
 		{
 			// Check the number of processors in the computer 
-			final int nproc = Runtime.getRuntime().availableProcessors();
+//			final int nproc = Runtime.getRuntime().availableProcessors();
+			final int nproc = MiscTools.NUM_PROCESSORS_TO_USE;
 
 			// We will use threads to calculate the similarity of the different parts of the target and source image
 
@@ -7568,7 +7572,8 @@ public class Transformation
 		
 		
 		// Check the number of processors in the computer 
-		final int nproc = Runtime.getRuntime().availableProcessors();
+//		final int nproc = Runtime.getRuntime().availableProcessors();
+		final int nproc = MiscTools.NUM_PROCESSORS_TO_USE;
 
 		// We will use threads to calculate the similarity of the different parts of the target and source image
 

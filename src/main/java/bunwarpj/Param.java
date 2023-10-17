@@ -53,7 +53,7 @@ public class Param {
 	/**
 	 * default value for property imageSumDecreaseThreshold
 	 */
-	public static final double DEFAULT_OPTIM_IMG_THRESH = 0.7;
+	public static final double DEFAULT_OPTIM_IMG_THRESH = 0.5;
 
 	/** mode accuracy mode (0 - Fast, 1 - Accurate, 2 - Mono) */
 	public int mode = 2;

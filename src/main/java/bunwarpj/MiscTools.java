@@ -78,6 +78,8 @@ import javax.swing.JFileChooser;
  */
 public class MiscTools
 {
+	public static int NUM_PROCESSORS_TO_USE = 6;
+
 	/* --------------------------------------------------------------------*/
 	/**
 	 * Apply a given B-spline transformation to the source (gray-scale) image.
@@ -3289,7 +3291,8 @@ public class MiscTools
 		// We will use threads to display parts of the output image
 
 		// Check the number of processors in the computer
-		final int nproc = Runtime.getRuntime().availableProcessors();
+//		final int nproc = Runtime.getRuntime().availableProcessors();
+		final int nproc = NUM_PROCESSORS_TO_USE;
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
 		int block_height = Math.max(targetHeight / nproc, 1);
@@ -3396,7 +3399,8 @@ public class MiscTools
 		// We will use threads to display parts of the output image
 
 		// Check the number of processors in the computer
-		int nproc = Runtime.getRuntime().availableProcessors();
+//		int nproc = Runtime.getRuntime().availableProcessors();
+		int nproc = NUM_PROCESSORS_TO_USE;
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
 		int block_height = Math.max(targetHeight / nproc, 1);
