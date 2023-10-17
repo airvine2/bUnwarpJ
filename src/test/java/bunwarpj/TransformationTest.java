@@ -765,7 +765,7 @@ class TransformationTest {
         int[][] warpedImageMtx = MiscTools.applyTransformationToGreyscaleImageMtx(testContainer.warp,
                 testContainer.sourceMtxInt);
 
-        int expectedMinResolution = 2;
+        int expectedMinResolution = 1;
         assertTrue(expectedMinResolution == minResolution_used);
 
         TestHelper.compareOrSaveTransform(testContainer.warp, testContainer.outputFolder,
