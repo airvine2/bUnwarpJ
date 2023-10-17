@@ -65,7 +65,7 @@ public class MathTools
      */
     public static double Bspline01 (double x)
     {
-       x = Math.abs(x);
+       x = StrictMath.abs(x);
        if (x < 1.0F) {
           return(1.0F - x);
        }
@@ -82,7 +82,7 @@ public class MathTools
      */
     public static double Bspline02 (double x)
     {
-       x = Math.abs(x);
+       x = StrictMath.abs(x);
        if (x < 0.5F) {
           return(3.0F / 4.0F - x * x);
        }
@@ -103,7 +103,7 @@ public class MathTools
      */
     public static double Bspline03 (double x)
     {
-       x = Math.abs(x);
+       x = StrictMath.abs(x);
        if (x < 1.0F) {
           return(0.5F * x * x * (x - 2.0F) + (2.0F / 3.0F));
        }
@@ -127,14 +127,14 @@ public class MathTools
        final double a,
        final double b)
     {
-       final double absa = Math.abs(a);
-       final double absb = Math.abs(b);
+       final double absa = StrictMath.abs(a);
+       final double absb = StrictMath.abs(b);
        if (absb < absa) {
-          return(absa * Math.sqrt(1.0 + (absb * absb / (absa * absa))));
+          return(absa * StrictMath.sqrt(1.0 + (absb * absb / (absa * absa))));
        }
        else {
           return((absb == 0.0F) ? (0.0F)
-             : (absb * Math.sqrt(1.0 + (absa * absa / (absb * absb)))));
+             : (absb * StrictMath.sqrt(1.0 + (absa * absa / (absb * absb)))));
        }
     } /* end EuclideanNorm */
 
@@ -166,7 +166,7 @@ public class MathTools
        // Compute W^-1
        int Nzeros=0;
        for (int k = 0; k<Xdim; k++) {
-          if (Math.abs(W[k]) < FLT_EPSILON) {
+          if (StrictMath.abs(W[k]) < FLT_EPSILON) {
              W[k] = 0.0F;
              Nzeros++;
           } else
@@ -304,7 +304,7 @@ public class MathTools
              s = 0.0F;
           }
           else {
-             s = 1.0F / Math.sqrt(s);
+             s = 1.0F / StrictMath.sqrt(s);
           }
           for (int i = 0; (i < lines); i++) {
              Q[i][j] *= s;
@@ -372,7 +372,7 @@ public class MathTools
           g = s = scale = 0.0F;
           if (i < lines) {
              for (int k = i; (k < lines); k++) {
-                scale += Math.abs(U[k][i]);
+                scale += StrictMath.abs(U[k][i]);
              }
              if (scale != 0.0) {
                 for (int k = i; (k < lines); k++) {
@@ -380,8 +380,8 @@ public class MathTools
                    s += U[k][i] * U[k][i];
                 }
                 f = U[i][i];
-                g = (0.0 <= f) ? (-Math.sqrt((double)s))
-                   : (Math.sqrt((double)s));
+                g = (0.0 <= f) ? (-StrictMath.sqrt((double)s))
+                   : (StrictMath.sqrt((double)s));
                 h = f * g - s;
                 U[i][i] = f - g;
                 for (int j = l; (j < columns); j++) {
@@ -403,7 +403,7 @@ public class MathTools
           g = s = scale = 0.0F;
           if ((i < lines) && (i != (columns - 1))) {
              for (int k = l; (k < columns); k++) {
-                scale += Math.abs(U[i][k]);
+                scale += StrictMath.abs(U[i][k]);
              }
              if (scale != 0.0) {
                 for (int k = l; (k < columns); k++) {
@@ -411,8 +411,8 @@ public class MathTools
                    s += U[i][k] * U[i][k];
                 }
                 f = U[i][l];
-                g = (0.0 <= f) ? (-Math.sqrt(s))
-                   : (Math.sqrt(s));
+                g = (0.0 <= f) ? (-StrictMath.sqrt(s))
+                   : (StrictMath.sqrt(s));
                 h = f * g - s;
                 U[i][l] = f - g;
                 for (int k = l; (k < columns); k++) {
@@ -432,8 +432,8 @@ public class MathTools
                 }
              }
           }
-          norm = ((Math.abs(W[i]) + Math.abs(rv1[i])) < norm) ? (norm)
-             : (Math.abs(W[i]) + Math.abs(rv1[i]));
+          norm = ((StrictMath.abs(W[i]) + StrictMath.abs(rv1[i])) < norm) ? (norm)
+             : (StrictMath.abs(W[i]) + StrictMath.abs(rv1[i]));
        }
        for (int i = columns - 1; (0 <= i); i--) {
           if (i < (columns - 1)) {
@@ -497,11 +497,11 @@ public class MathTools
              flag = true;
              for (l = k; (0 <= l); l--) {
                 nm = l - 1;
-                if ((Math.abs(rv1[l]) + norm) == norm) {
+                if ((StrictMath.abs(rv1[l]) + norm) == norm) {
                    flag = false;
                    break;
                 }
-                if ((Math.abs(W[nm]) + norm) == norm) {
+                if ((StrictMath.abs(W[nm]) + norm) == norm) {
                    break;
                 }
              }
@@ -511,7 +511,7 @@ public class MathTools
                 for (int i = l; (i <= k); i++) {
                    f = s * rv1[i];
                    rv1[i] *= c;
-                   if ((Math.abs(f) + norm) == norm) {
+                   if ((StrictMath.abs(f) + norm) == norm) {
                       break;
                    }
                    g = W[i];
@@ -548,8 +548,8 @@ public class MathTools
              h = rv1[k];
              f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0F * h * y);
              g = EuclideanNorm(f, 1.0F);
-             f = ((x - z) * (x + z) + h * ((y / (f + ((0.0 <= f) ? (Math.abs(g))
-                : (-Math.abs(g))))) - h)) / x;
+             f = ((x - z) * (x + z) + h * ((y / (f + ((0.0 <= f) ? (StrictMath.abs(g))
+                : (-StrictMath.abs(g))))) - h)) / x;
              c = s = 1.0F;
              for (int j = l; (j <= nm); j++) {
                 int i = j + 1;
@@ -629,7 +629,7 @@ public class MathTools
        // Perform aux=W^-1 U^t B
        for (int i=0; i<Columns; i++) {
            aux[i]=0.0F;
-          if (Math.abs(W[i]) > FLT_EPSILON) {
+          if (StrictMath.abs(W[i]) > FLT_EPSILON) {
               for (int j=0; j<Lines; j++) aux[i]+=U[j][i]*B[j]; // U^t B
               aux[i]/=W[i];                                     // W^-1 U^t B
            }

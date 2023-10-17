@@ -1907,7 +1907,7 @@ public class BSplineModel implements Runnable
 		while (currentWidth>=getMinImageWidth() && currentHeight>=getMinImageHeight())
 		{
 			currentWidth /= 2;
-			currentHeight = Math.max(currentHeight/2, 1);
+			currentHeight = StrictMath.max(currentHeight/2, 1);
 			scale++;
 		}
 		scale--;
@@ -2060,7 +2060,7 @@ public class BSplineModel implements Runnable
 			fullWidth = halfWidth;
 			fullHeight = halfHeight;
 			halfWidth /= 2;
-			halfHeight = Math.max(halfHeight/2, 1);
+			halfHeight = StrictMath.max(halfHeight/2, 1);
 			
 			// If the image is too small, we push the previous version of the coefficients
 			if(fullWidth <= getMinImageWidth() || (this.is2D() && (fullHeight <= getMinImageHeight())))
@@ -2126,7 +2126,7 @@ public class BSplineModel implements Runnable
 			fullWidth = halfWidth;
 			fullHeight = halfHeight;
 			halfWidth /= 2;
-			halfHeight = Math.max(halfHeight/2, 1);
+			halfHeight = StrictMath.max(halfHeight/2, 1);
 
 			// If the image is too small, we push the previous version of the coefficients
 			if(fullWidth <= getMinImageWidth() || fullHeight <= getMinImageHeight())
@@ -2187,7 +2187,7 @@ public class BSplineModel implements Runnable
 			 fullHeight = halfHeight;			 			 
 			 
 			 halfWidth /= 2;
-			 halfHeight = Math.max(halfHeight/2, 1);
+			 halfHeight = StrictMath.max(halfHeight/2, 1);
 			 
 			 if(fullWidth <= getMinImageWidth() || (this.is2D() && (fullHeight <= getMinImageHeight())))
 			 {				 
@@ -2471,7 +2471,7 @@ public class BSplineModel implements Runnable
 			 final int fullHeight)
 	 {
 		 final int halfWidth = fullWidth / 2;
-		 final int halfHeight = Math.max(fullHeight / 2, 1);
+		 final int halfHeight = StrictMath.max(fullHeight / 2, 1);
 		 final double[] hLine = new double[fullWidth];
 		 final double[] hData = new double[halfWidth];
 		 final double[] vLine = new double[fullHeight];
@@ -2525,11 +2525,11 @@ public class BSplineModel implements Runnable
 			 final double tolerance)
 	 {
 		 double z1 = z;
-		 double zn = Math.pow(z, c.length);
+		 double zn = StrictMath.pow(z, c.length);
 		 double sum = (1.0 + z) * (c[0] + zn * c[c.length - 1]);
 		 int horizon = c.length;
 		 if (0.0 < tolerance) {
-			 horizon = 2 + (int)(Math.log(tolerance) / Math.log(Math.abs(z)));
+			 horizon = 2 + (int)(StrictMath.log(tolerance) / StrictMath.log(StrictMath.abs(z)));
 			 horizon = (horizon < c.length) ? (horizon) : (c.length);
 		 }
 		 zn = zn * zn;
@@ -2538,7 +2538,7 @@ public class BSplineModel implements Runnable
 			 zn = zn / z;
 			 sum = sum + (z1 + zn) * c[n];
 		 }
-		 return(sum / (1.0 - Math.pow(z, 2 * c.length)));
+		 return(sum / (1.0 - StrictMath.pow(z, 2 * c.length)));
 	 } /* end getInitialCausalCoefficientMirrorOffBounds */
 
 	 //------------------------------------------------------------------
@@ -2642,7 +2642,7 @@ public class BSplineModel implements Runnable
 		 switch (degree) {
 		 case 3:
 			 z = new double[1];
-			 z[0] = Math.sqrt(3.0) - 2.0;
+			 z[0] = StrictMath.sqrt(3.0) - 2.0;
 			 break;
 		 case 7:
 			 z = new double[3];

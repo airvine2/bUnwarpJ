@@ -220,8 +220,8 @@ public class Mask
      */
     public boolean getValue(double x, double y)
     {
-       int u=(int)Math.round(x);
-       int v=(int)Math.round(y);
+       int u=(int)StrictMath.round(x);
+       int v=(int)StrictMath.round(y);
        if (u<0 || u>=width || v<0 || v>=height) return false;
        else                                     return mask[v*width+u];
     }

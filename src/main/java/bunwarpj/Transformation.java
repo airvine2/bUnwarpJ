@@ -614,7 +614,7 @@ public class Transformation
 		target.popFromPyramid();
 
 		// size correction factor
-		int sizeCorrectionFactor = 0; // this.targetHeight / (1024  * (int) Math.pow(2, this.maxImageSubsamplingFactor));
+		int sizeCorrectionFactor = 0; // this.targetHeight / (1024  * (int) StrictMath.pow(2, this.maxImageSubsamplingFactor));
 		//System.out.println("Size correction factor = " + sizeCorrectionFactor);
 		
 		targetCurrentHeight = target.getCurrentHeight();
@@ -630,7 +630,7 @@ public class Transformation
 		sourceFactorWidth   = source.getFactorWidth();
 
 		// Ask memory for the transformation coefficients
-		intervals = (int)Math.pow(2, min_scale_deformation + sizeCorrectionFactor);
+		intervals = (int)StrictMath.pow(2, min_scale_deformation + sizeCorrectionFactor);
 		
 		cxTargetToSource = new double[intervals+3][intervals+3];
 		cyTargetToSource = new double[intervals+3][intervals+3];
@@ -747,7 +747,7 @@ public class Transformation
 				if (s>=min_scale_deformation)
 				{
 					// Number of intervals at this scale and ask for memory
-					intervals = (int) Math.pow(2, s + sizeCorrectionFactor);
+					intervals = (int) StrictMath.pow(2, s + sizeCorrectionFactor);
 					final double[][] newcxTargetToSource = new double[intervals+3][intervals+3];
 					final double[][] newcyTargetToSource = new double[intervals+3][intervals+3];
 
@@ -862,10 +862,10 @@ public class Transformation
 					sourceFactorWidth  = source.getFactorWidth();
 
 					// Adapt the transformation to the new image size
-					double targetFactorY = (targetCurrentHeight-1) / Math.max(oldTargetCurrentHeight-1, 1.0);
-					double targetFactorX = (targetCurrentWidth -1) / Math.max((oldTargetCurrentWidth -1), 1.0);
-					double sourceFactorY = (sourceCurrentHeight-1) / Math.max((oldSourceCurrentHeight-1), 1.0);
-					double sourceFactorX = (sourceCurrentWidth -1) / Math.max((oldSourceCurrentWidth -1), 1.0);
+					double targetFactorY = (targetCurrentHeight-1) / StrictMath.max(oldTargetCurrentHeight-1, 1.0);
+					double targetFactorX = (targetCurrentWidth -1) / StrictMath.max((oldTargetCurrentWidth -1), 1.0);
+					double sourceFactorY = (sourceCurrentHeight-1) / StrictMath.max((oldSourceCurrentHeight-1), 1.0);
+					double sourceFactorX = (sourceCurrentWidth -1) / StrictMath.max((oldSourceCurrentWidth -1), 1.0);
 
 					for (int i=0; i<intervals+3; i++)
 						for (int j=0; j<intervals+3; j++)
@@ -896,10 +896,10 @@ public class Transformation
 			if(source.isSubOutput() || target.isSubOutput())
 				IJ.log("Adapting coefficients from " + this.sourceCurrentWidth + " to " + source.getOriginalImageWidth() +"...");
 			// Adapt the transformation to the new image size
-			double targetFactorY = (target.getOriginalImageHeight() - 1) / Math.max((targetCurrentHeight-1), 1.0);
-			double targetFactorX = (target.getOriginalImageWidth()  - 1) / Math.max((targetCurrentWidth -1), 1.0);
-			double sourceFactorY = (source.getOriginalImageHeight() - 1) / Math.max((sourceCurrentHeight-1), 1.0);
-			double sourceFactorX = (source.getOriginalImageWidth()  - 1) / Math.max((sourceCurrentWidth -1), 1.0);
+			double targetFactorY = (target.getOriginalImageHeight() - 1) / StrictMath.max((targetCurrentHeight-1), 1.0);
+			double targetFactorX = (target.getOriginalImageWidth()  - 1) / StrictMath.max((targetCurrentWidth -1), 1.0);
+			double sourceFactorY = (source.getOriginalImageHeight() - 1) / StrictMath.max((sourceCurrentHeight-1), 1.0);
+			double sourceFactorX = (source.getOriginalImageWidth()  - 1) / StrictMath.max((sourceCurrentWidth -1), 1.0);
 
 			for (int i=0; i<intervals+3; i++)
 				for (int j=0; j<intervals+3; j++)
@@ -968,8 +968,8 @@ public class Transformation
 		//(0 - Very Coarse, 1 - Coarse, 2 - Fine, 3 - Very Fine, 4 - Super Fine)
 
 		//startingDeformationDetail and endingDeformationDetail are limited by the values used when initializing
-		startingDeformationDetail = Math.max(startingDeformationDetail, this.min_scale_deformation);
-		endingDeformationDetail = Math.min(endingDeformationDetail, this.max_scale_deformation);
+		startingDeformationDetail = StrictMath.max(startingDeformationDetail, this.min_scale_deformation);
+		endingDeformationDetail = StrictMath.min(endingDeformationDetail, this.max_scale_deformation);
 
 		// Bring into consideration the image/coefficients at the smallest scale
 		source.popFromPyramid();
@@ -996,9 +996,9 @@ public class Transformation
 		sourceFactorWidth   = source.getFactorWidth();
 
 		// size correction factor
-		int sizeCorrectionFactor = 0; //this.targetHeight / (1024  * (int) Math.pow(2, this.maxImageSubsamplingFactor));
+		int sizeCorrectionFactor = 0; //this.targetHeight / (1024  * (int) StrictMath.pow(2, this.maxImageSubsamplingFactor));
 
-		intervals = (int)Math.pow(2, startingDeformationDetail + sizeCorrectionFactor);
+		intervals = (int)StrictMath.pow(2, startingDeformationDetail + sizeCorrectionFactor);
 
 		// These are the transformation coefficients
 		cxTargetToSource = new double[intervals+3][intervals+3];
@@ -1469,10 +1469,10 @@ public class Transformation
 		double sum = 0;
 		for (int i=0; i<mtx1.length; i++) {
 			for (int j=0; j<mtx1[0].length; j++) {
-				sum += Math.pow(mtx1[i][j] - mtx2[i][j], 2.0);
+				sum += StrictMath.pow(mtx1[i][j] - mtx2[i][j], 2.0);
 			}
 		}
-		return (Math.sqrt(sum));
+		return (StrictMath.sqrt(sum));
 	}
 
 	/**
@@ -1533,8 +1533,8 @@ public class Transformation
 
 	private void adaptCoeffsToNewImage(double[][] aCxTargetToSource, double[][] aCyTargetToSource) {
 		// Adapt the transformation to the new image size
-		double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
-		double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
+		double targetFactorX = (targetCurrentWidth - 1) / StrictMath.max(oldTargetCurrentWidth - 1, 1.0);
+		double targetFactorY = (targetCurrentHeight - 1) / StrictMath.max(oldTargetCurrentHeight - 1, 1.0);
 
 		for (int i = 0; i < intervals + 3; i++) {
 			for (int j = 0; j < intervals + 3; j++) {
@@ -1546,8 +1546,8 @@ public class Transformation
 
 	private void undoAdaptCoeffsToNewImage(double[][] aCxTargetToSource, double[][] aCyTargetToSource) {
 		// Adapt the transformation to the new image size
-		double targetFactorX = (targetCurrentWidth - 1) / Math.max(oldTargetCurrentWidth - 1, 1.0);
-		double targetFactorY = (targetCurrentHeight - 1) / Math.max(oldTargetCurrentHeight - 1, 1.0);
+		double targetFactorX = (targetCurrentWidth - 1) / StrictMath.max(oldTargetCurrentWidth - 1, 1.0);
+		double targetFactorY = (targetCurrentHeight - 1) / StrictMath.max(oldTargetCurrentHeight - 1, 1.0);
 
 		for (int i = 0; i < intervals + 3; i++) {
 			for (int j = 0; j < intervals + 3; j++) {
@@ -1580,7 +1580,7 @@ public class Transformation
 		// Update the deformation coefficients with the error of the landmarks
 
 		// Number of intervals at this scale and ask for memory
-		intervals = (int) Math.pow(2, s);
+		intervals = (int) StrictMath.pow(2, s);
 		final double[][] newcxTargetToSource = new double[intervals+3][intervals+3];
 		final double[][] newcyTargetToSource = new double[intervals+3][intervals+3];
 
@@ -2066,7 +2066,7 @@ public class Transformation
 
 		// Move x0 to the first point where both integrals
 		// are distinct from 0
-		x0p=Math.max(x0p,Math.max(s2p,0));
+		x0p=StrictMath.max(x0p,StrictMath.max(s2p,0));
 		if (x0p>xFp) return 0;
 
 		// There is something to integrate
@@ -2076,9 +2076,9 @@ public class Transformation
 		for (int k=0; k<=q2; k++) 
 		{
 			double aux=MathTools.nchoosek(q2,k)/(q1+k+1)*
-			Math.pow(-s2p,q2-k);
-			IxFp+=Math.pow(xFp,q1+k+1)*aux;
-			Ix0p+=Math.pow(x0p,q1+k+1)*aux;
+			StrictMath.pow(-s2p,q2-k);
+			IxFp+=StrictMath.pow(xFp,q1+k+1)*aux;
+			Ix0p+=StrictMath.pow(x0p,q1+k+1)*aux;
 		}
 
 		return IxFp-Ix0p;
@@ -2135,8 +2135,8 @@ public class Transformation
 		ip[1]=0;
 
 		// Determine the clipped inner limits of the intersection
-		int kir=Math.min(intervals,Math.min(ki1,ki2)+2);
-		int kil=Math.max(0        ,Math.max(ki1,ki2)-2);
+		int kir=StrictMath.min(intervals,StrictMath.min(ki1,ki2)+2);
+		int kil=StrictMath.max(0        ,StrictMath.max(ki1,ki2)-2);
 
 		if (kil>=kir) return false;
 
@@ -2327,8 +2327,8 @@ public class Transformation
 			D[2][2] += 1.0F;
 		}
 		MathTools.singularValueDecomposition(H, W, V);
-		if ((Math.abs(W[0]) < FLT_EPSILON) || (Math.abs(W[1]) < FLT_EPSILON)
-				|| (Math.abs(W[2]) < FLT_EPSILON)) {
+		if ((StrictMath.abs(W[0]) < FLT_EPSILON) || (StrictMath.abs(W[1]) < FLT_EPSILON)
+				|| (StrictMath.abs(W[2]) < FLT_EPSILON)) {
 			return(computeRotationMatrix(bIsReverse));
 		}
 		for (int i = 0; (i < 3); i++) {
@@ -2420,9 +2420,9 @@ public class Transformation
 		// scalex=sqrt(A(1,1)*A(1,1)+A(2,1)*A(2,1));
 		final double a11 = a.getScaleX();
 		final double a21 = a.getShearY();
-		final double scaleX = Math.sqrt( a11 * a11 + a21 * a21 );
+		final double scaleX = StrictMath.sqrt( a11 * a11 + a21 * a21 );
 		// rotang=atan2(A(2,1)/scalex,A(1,1)/scalex);
-		final double rotang = Math.atan2( a21/scaleX, a11/scaleX);
+		final double rotang = StrictMath.atan2( a21/scaleX, a11/scaleX);
 
 		// R=[[cos(-rotang) -sin(-rotang)];[sin(-rotang) cos(-rotang)]];
 
@@ -2430,13 +2430,13 @@ public class Transformation
 		//v=R*[A(1,2) A(2,2)]';
 		final double a12 = a.getShearX();
 		final double a22 = a.getScaleY();
-		final double shearX = Math.cos(-rotang) * a12 - Math.sin(-rotang) * a22;
-		final double scaleY = Math.sin(-rotang) * a12 + Math.cos(-rotang) * a22;
+		final double shearX = StrictMath.cos(-rotang) * a12 - StrictMath.sin(-rotang) * a22;
+		final double scaleY = StrictMath.sin(-rotang) * a12 + StrictMath.cos(-rotang) * a22;
 
 		// rotate back translation
 		// v=R*[A(1,3) A(2,3)]';
-		final double transX = Math.cos(-rotang) * a.getTranslateX() - Math.sin(-rotang) * a.getTranslateY();
-		final double transY = Math.sin(-rotang) * a.getTranslateX() + Math.cos(-rotang) * a.getTranslateY();
+		final double transX = StrictMath.cos(-rotang) * a.getTranslateX() - StrictMath.sin(-rotang) * a.getTranslateY();
+		final double transY = StrictMath.sin(-rotang) * a.getTranslateX() + StrictMath.cos(-rotang) * a.getTranslateY();
 
 		// TWEAK	
 		
@@ -2502,13 +2502,13 @@ public class Transformation
 		A=[[cos(rotang) -sin(rotang) 0];[sin(rotang) cos(rotang) 0];[0 0 1]] * A;
 		*/
 		
-		final double m00 = Math.cos(rotang) * scalex - Math.sin(rotang) * sheary;
-		final double m01 = Math.cos(rotang) * shearx - Math.sin(rotang) * scaley;
-		final double m02 = Math.cos(rotang) * transx - Math.sin(rotang) * transy;
+		final double m00 = StrictMath.cos(rotang) * scalex - StrictMath.sin(rotang) * sheary;
+		final double m01 = StrictMath.cos(rotang) * shearx - StrictMath.sin(rotang) * scaley;
+		final double m02 = StrictMath.cos(rotang) * transx - StrictMath.sin(rotang) * transy;
 		
-		final double m10 = Math.sin(rotang) * scalex + Math.cos(rotang) * sheary;
-		final double m11 = Math.sin(rotang) * shearx + Math.cos(rotang) * scaley;
-		final double m12 = Math.sin(rotang) * transx + Math.cos(rotang) * transy;
+		final double m10 = StrictMath.sin(rotang) * scalex + StrictMath.cos(rotang) * sheary;
+		final double m11 = StrictMath.sin(rotang) * shearx + StrictMath.cos(rotang) * scaley;
+		final double m12 = StrictMath.sin(rotang) * transx + StrictMath.cos(rotang) * transy;
 		
 		return new AffineTransform( m00,  m10,  m01,  m11,  m02,  m12);		
 	} // end method makeAffineMatrix	
@@ -3252,8 +3252,8 @@ public class Transformation
 				if (this.targetMsk.getValue(u/this.targetFactorWidth, v/this.targetFactorHeight))
 				{
 
-					final int x = (int) Math.round(swx_direct.precomputed_interpolateI(u,v));
-					final int y = (int) Math.round(swy_direct.precomputed_interpolateI(u,v));					 					
+					final int x = (int) StrictMath.round(swx_direct.precomputed_interpolateI(u,v));
+					final int y = (int) StrictMath.round(swy_direct.precomputed_interpolateI(u,v));					 					
 
 					if (x>=0 && x<this.sourceCurrentWidth && y>=0 && y<this.sourceCurrentHeight)
 					{
@@ -3346,8 +3346,8 @@ public class Transformation
 				// Check if this point is in the target mask
 				if (this.sourceMsk.getValue(u/this.sourceFactorWidth, v/this.sourceFactorHeight))
 				{
-					final int x = (int) Math.round( swx_inverse.precomputed_interpolateI(u, v));
-					final int y = (int) Math.round( swy_inverse.precomputed_interpolateI(u, v));
+					final int x = (int) StrictMath.round( swx_inverse.precomputed_interpolateI(u, v));
+					final int y = (int) StrictMath.round( swy_inverse.precomputed_interpolateI(u, v));
 
 					if (x>=0 && x<this.targetCurrentWidth && y>=0 && y<this.targetCurrentHeight)
 					{
@@ -3502,8 +3502,8 @@ public class Transformation
 				if (this.targetMsk.getValue(u/this.targetFactorWidth, v/this.targetFactorHeight))
 				{
 
-					final int x = (int) Math.round(swx_direct.precomputed_interpolateI(u,v));
-					final int y = (int) Math.round(swy_direct.precomputed_interpolateI(u,v));
+					final int x = (int) StrictMath.round(swx_direct.precomputed_interpolateI(u,v));
+					final int y = (int) StrictMath.round(swy_direct.precomputed_interpolateI(u,v));
 
 					if (x>=0 && x<this.sourceCurrentWidth && y>=0 && y<this.sourceCurrentHeight)
 					{
@@ -3596,8 +3596,8 @@ public class Transformation
 				// Check if this point is in the target mask
 				if (this.sourceMsk.getValue(u/this.sourceFactorWidth, v/this.sourceFactorHeight))
 				{
-					final int x = (int) Math.round( swx_inverse.precomputed_interpolateI(u, v));
-					final int y = (int) Math.round( swy_inverse.precomputed_interpolateI(u, v));
+					final int x = (int) StrictMath.round( swx_inverse.precomputed_interpolateI(u, v));
+					final int y = (int) StrictMath.round( swy_inverse.precomputed_interpolateI(u, v));
 
 					if (x>=0 && x<this.targetCurrentWidth && y>=0 && y<this.targetCurrentHeight)
 					{
@@ -4311,8 +4311,8 @@ public class Transformation
 						double x = swx.precomputed_interpolateI(u,v);
 						double y = swy.precomputed_interpolateI(u,v);
 						
-						final int ix = (int)Math.round(x);
-						final int iy = (int)Math.round(y);
+						final int ix = (int)StrictMath.round(x);
+						final int iy = (int)StrictMath.round(y);
 
 						// Check if this point is in the source mask
 						if (auxSourceMsk.getValue((double)ix/auxFactorWidth, (double)iy/auxFactorHeight))
@@ -4668,7 +4668,7 @@ public class Transformation
 		// Find the threshold for the most important components
 		double []sortedgradient= new double [M];
 		for (int i = 0; i < M; i++)
-			sortedgradient[i] = Math.abs(gradient[i]);
+			sortedgradient[i] = StrictMath.abs(gradient[i]);
 		Arrays.sort(sortedgradient);
 
 		double largestGradient = sortedgradient[M-1];
@@ -4699,7 +4699,7 @@ public class Transformation
 
 		// Take the Mused components with big gradients
 		for (i=0; i<M; i++)
-			if  (optimizep[i] && Math.abs(gradient[i])>=gradient_th) {
+			if  (optimizep[i] && StrictMath.abs(gradient[i])>=gradient_th) {
 				m++;
 				if (m==Mused) break;
 			}
@@ -4804,7 +4804,7 @@ public class Transformation
 		boolean  []optimize     = new boolean  [M];
 		int        i, j, p, iter = 1;
 		boolean    skip_update, ill_hessian;
-		double     improvementx = (double)Math.sqrt(TINY),
+		double     improvementx = (double)StrictMath.sqrt(TINY),
 		lambda = FIRSTLAMBDA, max_normx, distx, aux, gmax;
 		double     fac, fae, dgdx, dxHdx, sumdiffg, sumdiffx;
 
@@ -4886,20 +4886,20 @@ public class Transformation
 			for (i=0; i<M; i++)
 			{
 				diffx[i] = x[i] - rescuedx[i];
-				distx = Math.abs(diffx[i]);
+				distx = StrictMath.abs(diffx[i]);
 				improvementx += distx*distx;
-				aux = Math.abs(rescuedx[i]) < Math.abs(x[i]) ? x[i] : rescuedx[i];
+				aux = StrictMath.abs(rescuedx[i]) < StrictMath.abs(x[i]) ? x[i] : rescuedx[i];
 				max_normx += aux*aux;
 			}
 
 			if (TINY < max_normx) 
 				improvementx = improvementx/max_normx;
 
-			improvementx = (double) Math.sqrt(Math.sqrt(improvementx));
+			improvementx = (double) StrictMath.sqrt(StrictMath.sqrt(improvementx));
 
 			/* If there is no change with respect to the old geometry then
              finish the iterations */
-			if (improvementx < Math.sqrt(TINY)) break;
+			if (improvementx < StrictMath.sqrt(TINY)) break;
 
 			/* Estimate the new function value -------------------------------- */
 			f = energyFunction(x, intervals, grad, false, false);
@@ -4956,15 +4956,15 @@ public class Transformation
 					dxHdx    += diffx[i]*Hdx[i];
 					sumdiffg += diffgrad[i]*diffgrad[i];
 					sumdiffx += diffx[i]*diffx[i];
-					if (Math.abs(grad[i])>=Math.abs(rescuedgrad[i])) gmax=Math.abs(grad[i]);
-					else                                             gmax=Math.abs(rescuedgrad[i]);
-					if (gmax!=0 && Math.abs(diffgrad[i]-Hdx[i])>Math.sqrt(EPS)*gmax)
+					if (StrictMath.abs(grad[i])>=StrictMath.abs(rescuedgrad[i])) gmax=StrictMath.abs(grad[i]);
+					else                                             gmax=StrictMath.abs(rescuedgrad[i]);
+					if (gmax!=0 && StrictMath.abs(diffgrad[i]-Hdx[i])>StrictMath.sqrt(EPS)*gmax)
 						skip_update=false;
 				}
 
 				/* Update hessian ............................................. */
 				/* Skip if fac not sufficiently positive */
-				if (dgdx>Math.sqrt(EPS*sumdiffg*sumdiffx) && !skip_update) 
+				if (dgdx>StrictMath.sqrt(EPS*sumdiffg*sumdiffx) && !skip_update) 
 				{
 					fae=1.0F/dxHdx;
 					fac=1.0F/dgdx;
@@ -5095,7 +5095,7 @@ public class Transformation
 		boolean  []optimize     = new boolean  [M];
 		int        i, j, p, iter = 1;
 		boolean    skip_update, ill_hessian;
-		double     improvementx = (double)Math.sqrt(TINY),
+		double     improvementx = (double)StrictMath.sqrt(TINY),
 		lambda = FIRSTLAMBDA, max_normx, distx, aux, gmax;
 		double     fac, fae, dgdx, dxHdx, sumdiffg, sumdiffx;
 
@@ -5173,20 +5173,20 @@ public class Transformation
 			for (i=0; i<M; i++)
 			{
 				diffx[i] = x[i] - rescuedx[i];
-				distx = Math.abs(diffx[i]);
+				distx = StrictMath.abs(diffx[i]);
 				improvementx += distx*distx;
-				aux = Math.abs(rescuedx[i]) < Math.abs(x[i]) ? x[i] : rescuedx[i];
+				aux = StrictMath.abs(rescuedx[i]) < StrictMath.abs(x[i]) ? x[i] : rescuedx[i];
 				max_normx += aux*aux;
 			}
 
 			if (TINY < max_normx) 
 				improvementx = improvementx/max_normx;
 
-			improvementx = (double) Math.sqrt(Math.sqrt(improvementx));
+			improvementx = (double) StrictMath.sqrt(StrictMath.sqrt(improvementx));
 
 			/* If there is no change with respect to the old geometry then
              finish the iterations */
-			if (improvementx < Math.sqrt(TINY)) break;
+			if (improvementx < StrictMath.sqrt(TINY)) break;
 
 			/* Estimate the new function value -------------------------------- */
 			//f = evaluateSimilarity(x, intervals, grad, false, false, false);
@@ -5249,15 +5249,15 @@ public class Transformation
 					dxHdx    += diffx[i]*Hdx[i];
 					sumdiffg += diffgrad[i]*diffgrad[i];
 					sumdiffx += diffx[i]*diffx[i];
-					if (Math.abs(grad[i])>=Math.abs(rescuedgrad[i])) gmax=Math.abs(grad[i]);
-					else                                             gmax=Math.abs(rescuedgrad[i]);
-					if (gmax!=0 && Math.abs(diffgrad[i]-Hdx[i])>Math.sqrt(EPS)*gmax)
+					if (StrictMath.abs(grad[i])>=StrictMath.abs(rescuedgrad[i])) gmax=StrictMath.abs(grad[i]);
+					else                                             gmax=StrictMath.abs(rescuedgrad[i]);
+					if (gmax!=0 && StrictMath.abs(diffgrad[i]-Hdx[i])>StrictMath.sqrt(EPS)*gmax)
 						skip_update=false;
 				}
 
 				/* Update hessian ............................................. */
 				/* Skip if fac not sufficiently positive */
-				if (dgdx>Math.sqrt(EPS*sumdiffg*sumdiffx) && !skip_update) 
+				if (dgdx>StrictMath.sqrt(EPS*sumdiffg*sumdiffx) && !skip_update) 
 				{
 					fae=1.0F/dxHdx;
 					fac=1.0F/dgdx;
@@ -5598,8 +5598,8 @@ public class Transformation
 			auxTargetCurrentWidth = sourceCurrentWidth;
 		}
 		// Initialize output image
-		int stepv = Math.min(Math.max(10, auxTargetCurrentHeight/15), 30);
-		int stepu = Math.min(Math.max(10, auxTargetCurrentWidth/15), 30);
+		int stepv = StrictMath.min(StrictMath.max(10, auxTargetCurrentHeight/15), 30);
+		int stepu = StrictMath.min(StrictMath.max(10, auxTargetCurrentWidth/15), 30);
 		final double transformedImage [][] = new double [auxTargetCurrentHeight][auxTargetCurrentWidth];
 		for (int v=0; v<auxTargetCurrentHeight; v++)
 			for (int u=0; u<auxTargetCurrentWidth; u++)
@@ -5625,8 +5625,8 @@ public class Transformation
 					final double yh = transformation_y[v][uh];
 					MiscTools.drawLine(
 							transformedImage,
-							(int)Math.round(x) ,(int)Math.round(y),
-							(int)Math.round(xh),(int)Math.round(yh),0);
+							(int)StrictMath.round(x) ,(int)StrictMath.round(y),
+							(int)StrictMath.round(xh),(int)StrictMath.round(yh),0);
 				}
 
 				// Draw vertical line
@@ -5636,8 +5636,8 @@ public class Transformation
 					final double yv = transformation_y[vv][u];
 					MiscTools.drawLine(
 							transformedImage,
-							(int)Math.round(x) ,(int)Math.round(y),
-							(int)Math.round(xv),(int)Math.round(yv),0);
+							(int)StrictMath.round(x) ,(int)StrictMath.round(y),
+							(int)StrictMath.round(xv),(int)StrictMath.round(yv),0);
 				}
 			}
 
@@ -5687,8 +5687,8 @@ public class Transformation
 		}
 
 		// Initialize output image
-		int stepv = Math.min(Math.max(10, auxTargetCurrentHeight/15),30);
-		int stepu = Math.min(Math.max(10, auxTargetCurrentWidth/15),30);
+		int stepv = StrictMath.min(StrictMath.max(10, auxTargetCurrentHeight/15),30);
+		int stepu = StrictMath.min(StrictMath.max(10, auxTargetCurrentWidth/15),30);
 
 		final double transformedImage [][] = new double [auxTargetCurrentHeight][auxTargetCurrentWidth];
 
@@ -5714,7 +5714,7 @@ public class Transformation
 					if (auxSourceMsk.getValue(x,y))
 						MiscTools.drawArrow(
 								transformedImage,
-								u,v,(int)Math.round(x),(int)Math.round(y),0,2);
+								u,v,(int)StrictMath.round(x),(int)StrictMath.round(y),0,2);
 				}
 
 		// Set it to the image stack
@@ -5877,10 +5877,10 @@ public class Transformation
 
 			// We will use threads to display parts of the output image
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
-			int block_height = Math.max(auxTargetHeight / nproc, 1);
+			int block_height = StrictMath.max(auxTargetHeight / nproc, 1);
 
 			// Use one thread for each block
-			final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
+			final int nThreads = StrictMath.min(nproc, auxTargetHeight/block_height);
 						
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -5974,10 +5974,10 @@ public class Transformation
 
 			// We will use threads to display parts of the output image
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
-			int block_height = Math.max(auxTargetHeight / nproc, 1);
+			int block_height = StrictMath.max(auxTargetHeight / nproc, 1);
 
 			// Use one thread for each block
-			final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
+			final int nThreads = StrictMath.min(nproc, auxTargetHeight/block_height);
 						
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -6696,10 +6696,10 @@ public class Transformation
 		// We will use threads to display parts of the output image
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
-		int block_height = Math.max(auxTargetHeight / ((int)subFactorHeight * nproc), 1);
+		int block_height = StrictMath.max(auxTargetHeight / ((int)subFactorHeight * nproc), 1);
 
 		// Use one thread for each block
-		final int nThreads = Math.min(nproc, auxTargetHeight/block_height);
+		final int nThreads = StrictMath.min(nproc, auxTargetHeight/block_height);
 		
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -6765,8 +6765,8 @@ public class Transformation
 			
 		
 		// Some initialization
-		int stepv = Math.min(Math.max(10, auxTargetHeight/15), 60);
-		int stepu = Math.min(Math.max(10, auxTargetWidth/15), 60);
+		int stepv = StrictMath.min(StrictMath.max(10, auxTargetHeight/15), 60);
+		int stepu = StrictMath.min(StrictMath.max(10, auxTargetWidth/15), 60);
 		final double transformedImage [][] = new double [auxSourceHeight][auxSourceWidth];
 		double grid_colour = -1e-10;
 		uv = 0;
@@ -6814,8 +6814,8 @@ public class Transformation
 					final double up_yh = yh / auxFactorHeight;
 					MiscTools.drawLine(
 							transformedImage,
-							(int)Math.round(up_x) ,(int)Math.round(up_y),
-							(int)Math.round(up_xh),(int)Math.round(up_yh),grid_colour);
+							(int)StrictMath.round(up_x) ,(int)StrictMath.round(up_y),
+							(int)StrictMath.round(up_xh),(int)StrictMath.round(up_yh),grid_colour);
 				}
 
 				// Draw vertical line
@@ -6832,8 +6832,8 @@ public class Transformation
 					double up_yv=yv / auxFactorHeight;
 					MiscTools.drawLine(
 							transformedImage,
-							(int)Math.round(up_x) , (int)Math.round(up_y),
-							(int)Math.round(up_xv), (int)Math.round(up_yv), grid_colour);
+							(int)StrictMath.round(up_x) , (int)StrictMath.round(up_y),
+							(int)StrictMath.round(up_xv), (int)StrictMath.round(up_yv), grid_colour);
 				}
 			}
 
@@ -7142,10 +7142,10 @@ public class Transformation
 			// We will use threads to calculate the similarity of the different parts of the target and source image
 
 			//split rows as evenly as possible between available threads - smallest possible block height is 1
-			int block_height = Math.max(auxTargetCurrentHeight / nproc, 1);
+			int block_height = StrictMath.max(auxTargetCurrentHeight / nproc, 1);
 
 			// We use as many threads as blocks
-			final int nThreads = Math.min(nproc, auxTargetCurrentHeight/block_height);
+			final int nThreads = StrictMath.min(nproc, auxTargetCurrentHeight/block_height);
 			
 			Thread[] threads  = new Thread[nThreads];
 			Rectangle[] rects = new Rectangle[nThreads];
@@ -7578,12 +7578,12 @@ public class Transformation
 		// We will use threads to calculate the similarity of the different parts of the target and source image
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
-		int block_height_target = Math.max(this.targetCurrentHeight / nproc, 1);
-		int block_height_source = Math.max(this.sourceCurrentHeight / nproc, 1);
+		int block_height_target = StrictMath.max(this.targetCurrentHeight / nproc, 1);
+		int block_height_source = StrictMath.max(this.sourceCurrentHeight / nproc, 1);
 
 		//determine how many threads we need
 		// Use one thread for each block
-		final int nThreads = Math.min(nproc, Math.min(targetHeight/block_height_source, targetHeight/block_height_target));
+		final int nThreads = StrictMath.min(nproc, StrictMath.min(targetHeight/block_height_source, targetHeight/block_height_target));
 		//recalculate block heights using the final calculated value for nThreads
 		block_height_target = this.targetCurrentHeight / nThreads;
 		block_height_source = this.sourceCurrentHeight / nThreads;
@@ -7765,8 +7765,8 @@ public class Transformation
 					if (this.transf.targetMsk.getValue(u/this.transf.targetFactorWidth, v/this.transf.targetFactorHeight))
 					{
 
-						final int x = (int) Math.round(swx_direct.precomputed_interpolateI(u,v));
-						final int y = (int) Math.round(swy_direct.precomputed_interpolateI(u,v));					 					
+						final int x = (int) StrictMath.round(swx_direct.precomputed_interpolateI(u,v));
+						final int y = (int) StrictMath.round(swy_direct.precomputed_interpolateI(u,v));					 					
 
 						if (x>=0 && x<this.transf.sourceCurrentWidth && y>=0 && y<this.transf.sourceCurrentHeight)
 						{
@@ -7859,8 +7859,8 @@ public class Transformation
 					// Check if this point is in the target mask
 					if (this.transf.sourceMsk.getValue(u/this.transf.sourceFactorWidth, v/this.transf.sourceFactorHeight))
 					{
-						final int x = (int) Math.round( swx_inverse.precomputed_interpolateI(u, v));
-						final int y = (int) Math.round( swy_inverse.precomputed_interpolateI(u, v));
+						final int x = (int) StrictMath.round( swx_inverse.precomputed_interpolateI(u, v));
+						final int y = (int) StrictMath.round( swy_inverse.precomputed_interpolateI(u, v));
 
 						if (x>=0 && x<this.transf.targetCurrentWidth && y>=0 && y<this.transf.targetCurrentHeight)
 						{

@@ -201,7 +201,7 @@ class TransformationTest {
         TestHelper.setPrivateField(testContainer.warp, "sourceFactorHeight", source.getFactorHeight());
         TestHelper.setPrivateField(testContainer.warp, "sourceFactorWidth", source.getFactorWidth());
 
-        int intervals = (int)Math.pow(2, testContainer.options.min_scale_deformation);
+        int intervals = (int)StrictMath.pow(2, testContainer.options.min_scale_deformation);
         TestHelper.setPrivateField(testContainer.warp, "intervals", intervals);
 
         TestHelper.setPrivateField(testContainer.warp, "cxTargetToSource", new double[intervals+3][intervals+3]);
@@ -307,7 +307,7 @@ class TransformationTest {
         TestHelper.setPrivateField(testContainer.warp, "sourceFactorHeight", source.getFactorHeight());
         TestHelper.setPrivateField(testContainer.warp, "sourceFactorWidth", source.getFactorWidth());
 
-        int intervals = (int)Math.pow(2, testContainer.options.min_scale_deformation);
+        int intervals = (int)StrictMath.pow(2, testContainer.options.min_scale_deformation);
         TestHelper.setPrivateField(testContainer.warp, "intervals", intervals);
 
         TestHelper.setPrivateField(testContainer.warp, "cxTargetToSource", new double[intervals+3][intervals+3]);

@@ -483,7 +483,7 @@ public class MiscTools
 		    final double y = transformation_y[v][u];
 		    final double xdiff = x-movingCoords[0];
 		    final double ydiff = y-movingCoords[1];
-		    final double dist = Math.sqrt(xdiff*xdiff+ydiff*ydiff);
+		    final double dist = StrictMath.sqrt(xdiff*xdiff+ydiff*ydiff);
 		    if( dist < minDistance )
 		    {
 			minDistance = dist;
@@ -646,8 +646,8 @@ public class MiscTools
 			{
 				// Check if this point is in the target mask
 
-				final int x = (int) Math.round(transformation_x_direct[v][u]);
-				final int y = (int) Math.round(transformation_y_direct[v][u]);
+				final int x = (int) StrictMath.round(transformation_x_direct[v][u]);
+				final int y = (int) StrictMath.round(transformation_y_direct[v][u]);
 
 				if (x>=0 && x<sourceCurrentWidth && y>=0 && y<sourceCurrentHeight)
 				{
@@ -667,7 +667,7 @@ public class MiscTools
 			warpingIndex /= (double) n;
 			// Note: the only difference between the warping index and the 
 			// consistency term is this squared root.
-			warpingIndex = Math.sqrt(warpingIndex);            
+			warpingIndex = StrictMath.sqrt(warpingIndex);            
 		}
 		else
 			warpingIndex = -1;
@@ -881,7 +881,7 @@ public class MiscTools
 		// Scale them to the desired dimensions
 		
 //		double s = 0.5 * width / (n_bsplines-2);
-//		IJ.run(impX, "Gaussian Blur...", "sigma=" + Math.sqrt( s * s - 0.25 ) + " stack" );
+//		IJ.run(impX, "Gaussian Blur...", "sigma=" + StrictMath.sqrt( s * s - 0.25 ) + " stack" );
 //		IJ.run(impX, "Scale...", "x=- y=- width=" + b_width + " height=" + b_height + " process title=- interpolation=None" );
 //		
 //		int extraX =0; // (width % 2 == 0) ? 1 : 0;
@@ -917,7 +917,7 @@ public class MiscTools
 //		//ImagePlus impY = new ImagePlus("y_original" , fpY );
 //		
 //		
-//		//IJ.run(impY, "Gaussian Blur...", "sigma=" + Math.sqrt( s * s - 0.25 ) + " stack" );
+//		//IJ.run(impY, "Gaussian Blur...", "sigma=" + StrictMath.sqrt( s * s - 0.25 ) + " stack" );
 //		IJ.run(impY, "Scale...", "x=- y=- width=" + (n_bsplines-2) + " height=" + (n_bsplines-2) + " process title=- interpolation=None" );
 //		//IJ.run(impY, "Canvas Size...", "width=" + (n_bsplines-2) + " height=" + (n_bsplines-2) + " position=Center" );
 //		impY.setRoi(initialX, initialY, b_width, b_height);
@@ -965,8 +965,8 @@ public class MiscTools
 //		} catch (InterruptedException e) {
 //			IJ.error("Unexpected interruption exception " + e);
 //		}
-		//double x_factor = Math.sqrt(2);
-		//double y_factor = 1.0 / Math.sqrt(2);
+		//double x_factor = StrictMath.sqrt(2);
+		//double y_factor = 1.0 / StrictMath.sqrt(2);
 		
 		//IJ.log("x_factor = " + x_factor + " y_factor = " + y_factor);
 		
@@ -1140,8 +1140,8 @@ public class MiscTools
 		for (int i = 0; i < targetCurrentHeight; i++)
 			for (int j = 0; j < targetCurrentWidth; j++)
 			{
-				final int originX =(int) Math.round(transformation_x[i][j]);
-				final int originY =(int) Math.round(transformation_y[i][j]);
+				final int originX =(int) StrictMath.round(transformation_x[i][j]);
+				final int originY =(int) StrictMath.round(transformation_y[i][j]);
 				
 				if(originX >= 0 && originX < targetCurrentWidth && originY >= 0 && originY < targetCurrentHeight)
 				{
@@ -1372,7 +1372,7 @@ public class MiscTools
 		if(n != 0)
 		{
 			warpingIndex /= (double) n;
-			warpingIndex = Math.sqrt(warpingIndex);
+			warpingIndex = StrictMath.sqrt(warpingIndex);
 		}
 		else
 			warpingIndex = -1;
@@ -1439,7 +1439,7 @@ public class MiscTools
 		if(n != 0)
 		{
 			warpingIndex /= (double) n;
-			warpingIndex = Math.sqrt(warpingIndex);
+			warpingIndex = StrictMath.sqrt(warpingIndex);
 		}
 		else
 			warpingIndex = -1;
@@ -1493,27 +1493,27 @@ public class MiscTools
 		// Now we need to rotate the arrow head about the origin
 		else {
 			// Calculate the angle of rotation and adjust for the quadrant
-			double t1 = Math.abs(new Integer(y2 - y1).doubleValue());
-			double t2 = Math.abs(new Integer(x2 - x1).doubleValue());
-			double theta = Math.atan(t1 / t2);
+			double t1 = StrictMath.abs(new Integer(y2 - y1).doubleValue());
+			double t2 = StrictMath.abs(new Integer(x2 - x1).doubleValue());
+			double theta = StrictMath.atan(t1 / t2);
 			if (x2 < x1) {
-				if (y2 < y1) theta = Math.PI + theta;
-				else         theta = - (Math.PI + theta);
+				if (y2 < y1) theta = StrictMath.PI + theta;
+				else         theta = - (StrictMath.PI + theta);
 			} else if (x2 > x1 && y2 < y1)
-				theta =  2*Math.PI - theta;
-			double cosTheta = Math.cos(theta);
-			double sinTheta = Math.sin(theta);
+				theta =  2*StrictMath.PI - theta;
+			double cosTheta = StrictMath.cos(theta);
+			double sinTheta = StrictMath.sin(theta);
 
 			// Create the other points and translate the arrow to the origin
 			Point p2 = new Point(-arrow_size2,-arrow_size);
 			Point p3 = new Point(-arrow_size2,+arrow_size);
 
 			// Rotate the points (without using matrices!)
-			int x = new Long(Math.round((cosTheta * p2.x) - (sinTheta * p2.y))).intValue();
-			p2.y = new Long(Math.round((sinTheta * p2.x) + (cosTheta * p2.y))).intValue();
+			int x = new Long(StrictMath.round((cosTheta * p2.x) - (sinTheta * p2.y))).intValue();
+			p2.y = new Long(StrictMath.round((sinTheta * p2.x) + (cosTheta * p2.y))).intValue();
 			p2.x = x;
-			x = new Long(Math.round((cosTheta * p3.x) - (sinTheta * p3.y))).intValue();
-			p3.y = new Long(Math.round((sinTheta * p3.x) + (cosTheta * p3.y))).intValue();
+			x = new Long(StrictMath.round((cosTheta * p3.x) - (sinTheta * p3.y))).intValue();
+			p3.y = new Long(StrictMath.round((sinTheta * p3.x) + (cosTheta * p3.y))).intValue();
 			p3.x = x;
 
 			// Translate back to desired location and add to polygon
@@ -1744,7 +1744,7 @@ public class MiscTools
 			final float[] pixels = (float[])ip.getPixels();
 			for (int y = 0; (y < height); y++)
 				for (int x = 0; (x < width); x++, k++)
-					image[y][x] = Math.round(pixels[k]);
+					image[y][x] = StrictMath.round(pixels[k]);
 		}
 	}
 
@@ -1785,7 +1785,7 @@ public class MiscTools
 			for (int y = 0; (y < height); y++) {
 				for (int x = 0; (x < width); x++, k++) {
 					int arrayIdx = (y * width) + x;
-					image[arrayIdx] = Math.round(pixels[k]);
+					image[arrayIdx] = StrictMath.round(pixels[k]);
 				}
 			}
 		}
@@ -3295,10 +3295,10 @@ public class MiscTools
 		final int nproc = NUM_PROCESSORS_TO_USE;
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
-		int block_height = Math.max(targetHeight / nproc, 1);
+		int block_height = StrictMath.max(targetHeight / nproc, 1);
 
 		// Use one thread for each block
-		final int nThreads = Math.min(nproc, targetHeight/block_height);
+		final int nThreads = StrictMath.min(nproc, targetHeight/block_height);
 
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -3403,10 +3403,10 @@ public class MiscTools
 		int nproc = NUM_PROCESSORS_TO_USE;
 
 		//split rows as evenly as possible between available threads - smallest possible block height is 1
-		int block_height = Math.max(targetHeight / nproc, 1);
+		int block_height = StrictMath.max(targetHeight / nproc, 1);
 
 		// Use one thread for each block
-		final int nThreads = Math.min(nproc, targetHeight/block_height);
+		final int nThreads = StrictMath.min(nproc, targetHeight/block_height);
 
 		Thread[] threads  = new Thread[nThreads];
 		Rectangle[] rects = new Rectangle[nThreads];
@@ -3815,7 +3815,7 @@ public class MiscTools
 	{
 		if ( scale >= 1.0f ) return;
 		float s = targetSigma / scale;
-		float sigma = ( float )Math.sqrt( s * s - sourceSigma * sourceSigma );
+		float sigma = ( float )StrictMath.sqrt( s * s - sourceSigma * sourceSigma );
 		new GaussianBlur().blurGaussian( source, sigma, sigma, 0.01 );
 	}
 
@@ -3838,8 +3838,8 @@ public class MiscTools
 	{
 		final int ow = source.getWidth();
 		final int oh = source.getHeight();
-		final int w = Math.round( ow * scale );
-		final int h = Math.round( oh * scale );
+		final int w = StrictMath.round( ow * scale );
+		final int h = StrictMath.round( oh * scale );
 		
 		final ImageProcessor temp = source.duplicate();
 		if ( scale >= 1.0f ) return temp;
@@ -3862,7 +3862,7 @@ public class MiscTools
 		else
 		{
 			source.setInterpolationMethod( ImageProcessor.BILINEAR );
-			return source.resize( Math.round( scale * source.getWidth() ) );
+			return source.resize( StrictMath.round( scale * source.getWidth() ) );
 		}
 	}
 	

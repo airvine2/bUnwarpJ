@@ -306,8 +306,8 @@ public class MainDialog extends GenericDialog
 						// Update re-sampling factor
 						MainDialog.this.maxImageSubsamplingFactor = Integer.parseInt(resamplingTextField.getText());
 						// and update source and target
-						source.setSubsamplingFactor((int) Math.pow(2, MainDialog.this.maxImageSubsamplingFactor));
-						target.setSubsamplingFactor((int) Math.pow(2, MainDialog.this.maxImageSubsamplingFactor));
+						source.setSubsamplingFactor((int) StrictMath.pow(2, MainDialog.this.maxImageSubsamplingFactor));
+						target.setSubsamplingFactor((int) StrictMath.pow(2, MainDialog.this.maxImageSubsamplingFactor));
 						
 						//IJ.log("updated re-sampling factor to " + resamplingTextField.getText());
 					}}
@@ -973,7 +973,7 @@ public class MainDialog extends GenericDialog
 
 		// Create image model to perform registration
 		source = new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-				(int) Math.pow(2, this.maxImageSubsamplingFactor));
+				(int) StrictMath.pow(2, this.maxImageSubsamplingFactor));
 
 		this.computeImagePyramidDepth();
 		source.setPyramidDepth(imagePyramidDepth + min_scale_image);
@@ -1049,7 +1049,7 @@ public class MainDialog extends GenericDialog
 
 		this.target    =
 			new BSplineModel(targetImp.getProcessor(), true, 
-					(int) Math.pow(2, this.maxImageSubsamplingFactor));
+					(int) StrictMath.pow(2, this.maxImageSubsamplingFactor));
 		
 		this.computeImagePyramidDepth();
 		this.target.setPyramidDepth(imagePyramidDepth + min_scale_image);
@@ -1193,12 +1193,12 @@ public class MainDialog extends GenericDialog
 
 		// Restart the computation with each image
 		this.source = new BSplineModel(this.sourceImp.getProcessor(), bIsReverse, 
-				(int) Math.pow(2,this.maxImageSubsamplingFactor));
+				(int) StrictMath.pow(2,this.maxImageSubsamplingFactor));
 		this.source.setPyramidDepth(imagePyramidDepth + min_scale_image);
 		//this.source.getThread().start();
 
 		this.target = new BSplineModel(this.targetImp.getProcessor(), true, 
-				(int) Math.pow(2,this.maxImageSubsamplingFactor));
+				(int) StrictMath.pow(2,this.maxImageSubsamplingFactor));
 		this.target.setPyramidDepth(imagePyramidDepth + min_scale_image);
 		//this.target.getThread().start();
 	} /* end permuteImages */
@@ -1223,13 +1223,13 @@ public class MainDialog extends GenericDialog
 		// Now restart the threads
 		source    =
 			new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-					(int) Math.pow(2,this.maxImageSubsamplingFactor));
+					(int) StrictMath.pow(2,this.maxImageSubsamplingFactor));
 		source.setPyramidDepth(imagePyramidDepth + min_scale_image);
 		//source.getThread().start();
 
 		target =
 			new BSplineModel(targetImp.getProcessor(), true, 
-					(int) Math.pow(2,this.maxImageSubsamplingFactor));
+					(int) StrictMath.pow(2,this.maxImageSubsamplingFactor));
 		target.setPyramidDepth(imagePyramidDepth + min_scale_image);
 		//target.getThread().start();
 	}

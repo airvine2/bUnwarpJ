@@ -342,9 +342,9 @@ public class bUnwarpJ_ implements PlugIn
 
         //Init source and target image model
         final BSplineModel target = new BSplineModel(targetImp.getProcessor(), true,
-                (int) Math.pow(2, parameter.img_subsamp_fact));
+                (int) StrictMath.pow(2, parameter.img_subsamp_fact));
         final BSplineModel source = new BSplineModel(sourceImp.getProcessor(), true,
-                (int) Math.pow(2, parameter.img_subsamp_fact));
+                (int) StrictMath.pow(2, parameter.img_subsamp_fact));
 
         // Create target mask
         final Mask targetMsk = (targetMskIP != null) ? new Mask(targetMskIP, true)
@@ -427,9 +427,9 @@ public class bUnwarpJ_ implements PlugIn
         }
 
         // Create target image model
-        final BSplineModel target = new BSplineModel(targetWidth, targetHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
+        final BSplineModel target = new BSplineModel(targetWidth, targetHeight, (int) StrictMath.pow(2, parameter.img_subsamp_fact));
         // Create source image model
-        final BSplineModel source = new BSplineModel(sourceWidth, sourceHeight, (int) Math.pow(2, parameter.img_subsamp_fact));
+        final BSplineModel source = new BSplineModel(sourceWidth, sourceHeight, (int) StrictMath.pow(2, parameter.img_subsamp_fact));
 
         // Create target mask
         final Mask targetMsk = new Mask(targetWidth, targetHeight);
@@ -853,7 +853,7 @@ public class bUnwarpJ_ implements PlugIn
 
     	// Create target image model
     	final BSplineModel target = new BSplineModel(scaledTargetIP, true, 
-    			(int) Math.pow(2, img_subsamp_fact));
+    			(int) StrictMath.pow(2, img_subsamp_fact));
 
     	target.setPyramidDepth(imagePyramidDepth+min_scale_image);
     	target.startPyramids();
@@ -868,7 +868,7 @@ public class bUnwarpJ_ implements PlugIn
     	boolean bIsReverse = true;         
 
     	final BSplineModel source = new BSplineModel(scaledSourceIP, bIsReverse, 
-    			(int) Math.pow(2, img_subsamp_fact));
+    			(int) StrictMath.pow(2, img_subsamp_fact));
 
     	source.setPyramidDepth(imagePyramidDepth + min_scale_image);
     	source.startPyramids();
@@ -1162,7 +1162,7 @@ public class bUnwarpJ_ implements PlugIn
        targetImp = opener.openImage(fn_target);
        
        BSplineModel target = new BSplineModel(targetImp.getProcessor(), true, 
-    		   												(int) Math.pow(2, max_subsamp_fact));
+    		   												(int) StrictMath.pow(2, max_subsamp_fact));
        
        target.setPyramidDepth(imagePyramidDepth + min_scale_image);
        target.startPyramids();
@@ -1182,7 +1182,7 @@ public class bUnwarpJ_ implements PlugIn
        ImagePlus sourceImp = opener.openImage(fn_source);   
 
        BSplineModel source = new BSplineModel(sourceImp.getProcessor(), bIsReverse, 
-    		   												(int) Math.pow(2, max_subsamp_fact));
+    		   												(int) StrictMath.pow(2, max_subsamp_fact));
 
        source.setPyramidDepth(imagePyramidDepth + min_scale_image);
        source.startPyramids();

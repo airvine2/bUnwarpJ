@@ -93,15 +93,15 @@ public class BSpline
 	{
 		int nxIn = input.length;
 		
-		double bb = Math.round( ((nxIn-1) * scale) * 1 / scale);
+		double bb = StrictMath.round( ((nxIn-1) * scale) * 1 / scale);
 		while ((nxIn-1-bb) != 0)
 		{
 		    nxIn = nxIn + 1;
-		    bb = Math.round(((nxIn-1)*scale)*1/scale);
+		    bb = StrictMath.round(((nxIn-1)*scale)*1/scale);
 		}
 		
 		// Output signal
-		int nxOut = (int) Math.round((nxIn-1)*scale)+1;
+		int nxOut = (int) StrictMath.round((nxIn-1)*scale)+1;
 		double[] out = new double[nxOut];
 		
 		// From samples to coefficients
@@ -180,9 +180,9 @@ public class BSpline
 		
 		//Recover the output size and add the mean
 		final int n11 = n1+1;
-		final int val1 = (n11*0.5 == (int) Math.floor(n11*0.5)) ? (int) (n11*0.5) : (int) Math.floor(n11*0.5)+1;
+		final int val1 = (n11*0.5 == (int) StrictMath.floor(n11*0.5)) ? (int) (n11*0.5) : (int) StrictMath.floor(n11*0.5)+1;
 		
-		//final int val2 = (int) Math.floor(n11*0.5);
+		//final int val2 = (int) StrictMath.floor(n11*0.5);
 				
 		double[] fdShort = new double[nxOut];
 		
@@ -318,25 +318,25 @@ public class BSpline
 	public static double[] resampling(double[] input, int nInput, int nOut,
 			double scale, int n1, int nt) 
 	{
-		final boolean even = ( (n1+1)*0.5 == Math.floor((n1+1)*0.5) ) ? true : false;
+		final boolean even = ( (n1+1)*0.5 == StrictMath.floor((n1+1)*0.5) ) ? true : false;
 		
 		int m = factorial(nt);
 		double[] temp = new double[nt + 1];
 		
-		final int val1 = (int) (even ? (n1+1)*0.5 : (int) Math.floor((n1+1)*0.5)+1);
+		final int val1 = (int) (even ? (n1+1)*0.5 : (int) StrictMath.floor((n1+1)*0.5)+1);
 		double newx0 = even ? (nt+1)*0.5-val1/scale : 0.5*(1/scale-1) + (nt+1)*0.5-val1/scale;
 		
-		final double aa = Math.pow(scale, n1+1);
-		final double val2 = Math.floor((n1+1)*0.5);
+		final double aa = StrictMath.pow(scale, n1+1);
+		final double val2 = StrictMath.floor((n1+1)*0.5);
 		
 		double[] out = new double[ nOut+n1+1 ];
 		
 		for(int k = -val1; k < (nOut + val2); k++)
 		{
-			final int val = (int) Math.ceil(-(nt+1) + newx0);
+			final int val = (int) StrictMath.ceil(-(nt+1) + newx0);
 			
 			for (int s = 0; s <= nt; s++)
-				temp[s] = Math.pow(-newx0+(nt+1)+val+s, nt)/m;
+				temp[s] = StrictMath.pow(-newx0+(nt+1)+val+s, nt)/m;
 			
 			for (int s = 0; s <= nt; s++)
 				for(int l = nt+1; l > 0; l--)
@@ -565,7 +565,7 @@ public class BSpline
 		int horizon = dataLength;
 		
 		if (tolerance > 0.0)
-		    horizon = (int) (Math.ceil(Math.log(tolerance))/Math.log(Math.abs(z)));		   
+		    horizon = (int) (StrictMath.ceil(StrictMath.log(tolerance))/StrictMath.log(StrictMath.abs(z)));		   
 
 		if (horizon < dataLength)
 		{
@@ -583,7 +583,7 @@ public class BSpline
 			// full loop
 			double zn = z;
 			double iz = 1.0 / z;
-			double z2n = Math.pow(z, (dataLength - 1));
+			double z2n = StrictMath.pow(z, (dataLength - 1));
 			sum = c[0] + z2n * c[dataLength-1];
 			z2n = z2n * z2n * iz;
 			for (int n = 1; n < dataLength - 1; n++)
@@ -612,21 +612,21 @@ public class BSpline
 		{		
 			case 2:
 				pole = new double[1];
-				pole[0] = Math.sqrt(8.0) - 3.0;
+				pole[0] = StrictMath.sqrt(8.0) - 3.0;
 				break;
 			case 3:
 				pole = new double[1];
-				pole[0] = Math.sqrt(3.0) - 2.0;
+				pole[0] = StrictMath.sqrt(3.0) - 2.0;
 				break;
 			case 4:
 				pole = new double[2];
-				pole[0] = Math.sqrt(664.0 - Math.sqrt(438976.0)) + Math.sqrt(304.0) - 19.0;
-				pole[1] = Math.sqrt(664.0 + Math.sqrt(438976.0)) - Math.sqrt(304.0) - 19.0;
+				pole[0] = StrictMath.sqrt(664.0 - StrictMath.sqrt(438976.0)) + StrictMath.sqrt(304.0) - 19.0;
+				pole[1] = StrictMath.sqrt(664.0 + StrictMath.sqrt(438976.0)) - StrictMath.sqrt(304.0) - 19.0;
 				break;
 			case 5:
 				pole = new double[2];
-				pole[0] = Math.sqrt(135.0 / 2.0 - Math.sqrt(17745.0 / 4.0)) + Math.sqrt(105.0 / 4.0) - 13.0 / 2.0;
-				pole[1] = Math.sqrt(135.0 / 2.0 + Math.sqrt(17745.0 / 4.0)) - Math.sqrt(105.0 / 4.0) - 13.0 / 2.0;
+				pole[0] = StrictMath.sqrt(135.0 / 2.0 - StrictMath.sqrt(17745.0 / 4.0)) + StrictMath.sqrt(105.0 / 4.0) - 13.0 / 2.0;
+				pole[1] = StrictMath.sqrt(135.0 / 2.0 + StrictMath.sqrt(17745.0 / 4.0)) - StrictMath.sqrt(105.0 / 4.0) - 13.0 / 2.0;
 				break;
 			case 6:
 				pole = new double[3];
