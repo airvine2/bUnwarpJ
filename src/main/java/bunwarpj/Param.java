@@ -221,7 +221,7 @@ public class Param {
 	public String toString()
 	{
 		return new String("Registration mode: " + sRegistrationModes[mode] + "\n" + 
-						  "Image Sub-sampling factor:  " + img_subsamp_fact + " => " + StrictMath.pow(2.0,img_subsamp_fact) + "\n" +
+						  "Image Sub-sampling factor:  " + img_subsamp_fact + " => " + Math.pow(2.0,img_subsamp_fact) + "\n" +
 						  "Minimum scale factor = " + sMinScaleDeformationChoices[min_scale_deformation] + "\n" + 
 						  "Maximum scale factor = " + sMaxScaleDeformationChoices[max_scale_deformation] + "\n" + 
 						  "Divergence weight = " + divWeight + "\n" + 

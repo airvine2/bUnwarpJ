@@ -166,18 +166,18 @@ public class PointAction extends ImageCanvas implements KeyListener, MouseListen
 	    	case KeyEvent.VK_DOWN:
 	    		mainPh.movePoint(mainImp.getWindow().getCanvas().screenX(x),
 	    				mainImp.getWindow().getCanvas().screenY(y
-	    						+ (int)StrictMath.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())));
+	    						+ (int)Math.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())));
 	    		mainImp.setRoi(mainPh);
 	    		break;
 	    	case KeyEvent.VK_LEFT:
 	    		mainPh.movePoint(mainImp.getWindow().getCanvas().screenX(x
-	    				- (int)StrictMath.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())),
+	    				- (int)Math.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())),
 	    				mainImp.getWindow().getCanvas().screenY(y));
 	    		mainImp.setRoi(mainPh);
 	    		break;
 	    	case KeyEvent.VK_RIGHT:
 	    		mainPh.movePoint(mainImp.getWindow().getCanvas().screenX(x
-	    				+ (int)StrictMath.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())),
+	    				+ (int)Math.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())),
 	    				mainImp.getWindow().getCanvas().screenY(y));
 	    		mainImp.setRoi(mainPh);
 	    		break;
@@ -189,7 +189,7 @@ public class PointAction extends ImageCanvas implements KeyListener, MouseListen
 	    	case KeyEvent.VK_UP:
 	    		mainPh.movePoint(mainImp.getWindow().getCanvas().screenX(x),
 	    				mainImp.getWindow().getCanvas().screenY(y
-	    						- (int)StrictMath.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())));
+	    						- (int)Math.ceil(1.0 / mainImp.getWindow().getCanvas().getMagnification())));
 	    		mainImp.setRoi(mainPh);
 	    		break;
     	}
