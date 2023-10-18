@@ -50,7 +50,7 @@ import ij.IJ;
 public class Credits implements ij.plugin.PlugIn
 { /* begin class Credits */
 	/** plugin version information */
-	static public String version = "2.6.12 11-13-2019";
+	static public String version = "2.6.12 11-13-2019, BD_custom_build_1.0";
 
 	/*....................................................................
        Public methods

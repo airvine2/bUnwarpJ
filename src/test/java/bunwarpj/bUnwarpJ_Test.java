@@ -261,7 +261,9 @@ class bUnwarpJ_Test {
     @DisplayName("test overloaded computeTransformationBatch(int[][] targetImageMtx, int[][] sourceImageMtx, Param parameter)")
     void testComputeTransformationBatch3() throws Exception {
 
-        TestContainer testContainer = new TestContainer("C:\\images-as-csv\\2D-int");
+        Path inputFolder = this.resourcePath.resolve("2D-int");
+
+        TestContainer testContainer = new TestContainer(inputFolder.toString());
 
         Transformation tResult = bUnwarpJ_.computeTransformationBatch(testContainer.targetMtxInt, testContainer.sourceMtxInt,
                 testContainer.options);
